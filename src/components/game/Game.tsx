@@ -34,6 +34,8 @@ import {
 import { aiStatus, evaluateAnswers, examinerSay } from "@/lib/game/ai";
 import { Portrait, type Mood, type Who } from "./Portrait";
 import { QuestMap } from "./QuestMap";
+import { Mic } from "./Mic";
+import { useSpeaker } from "./useSpeaker";
 import { Coins, GapBars, Heart, Pulse } from "./Vitals";
 
 type Phase = "home" | "setup" | "hub" | "session" | "debrief" | "report";
@@ -95,6 +97,8 @@ export default function Game() {
   const [live, setLive] = useState<Live | null>(null);
   const [lastOutcome, setLastOutcome] = useState<SessionRecord | null>(null);
 
+  // Variante vocale (l'esaminatore parla, lo studente risponde al microfono): richiede l'AI.
+  const [voicePref, setVoicePref] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -106,6 +110,7 @@ export default function Game() {
         if (typeof s.course === "string") setCourse(s.course);
         if (s.custom)
           setCustom({ name: String(s.custom.name ?? ""), topics: String(s.custom.topics ?? "") });
+        setVoicePref(s.voice === true);
         // Una seduta interrotta (ricarica, chiusura della scheda) riprende da dove era rimasta.
         if (s.live?.topics?.[s.live.idx] && Array.isArray(s.live.records)) {
           setLive(s.live);
@@ -121,11 +126,14 @@ export default function Game() {
   useEffect(() => {
     if (!hydrated) return;
     try {
-      localStorage.setItem(KEY, JSON.stringify({ sessions, course, custom, live }));
+      localStorage.setItem(
+        KEY,
+        JSON.stringify({ sessions, course, custom, live, voice: voicePref }),
+      );
     } catch {
       /* storage pieno o negato */
     }
-  }, [hydrated, sessions, course, custom, live]);
+  }, [hydrated, sessions, course, custom, live, voicePref]);
 
   const pool = useMemo(
     () =>
@@ -140,6 +148,7 @@ export default function Game() {
   const [debriefId, setDebriefId] = useState<string | null>(null);
   // Esaminatore AI disponibile solo se il server ha una chiave: altrimenti modalità demo.
   const [ai, setAi] = useState(false);
+  const voice = ai && voicePref;
   useEffect(() => {
     aiStatus()
       .then((r) => setAi(r.enabled))
@@ -232,6 +241,25 @@ export default function Game() {
             >
               {ai ? "Esaminatore AI" : "Modalità demo"}
             </span>
+            {ai && (
+              <div role="group" aria-label="Modalità d'esame" className="flex">
+                {(
+                  [
+                    [false, "Testo"],
+                    [true, "Voce"],
+                  ] as const
+                ).map(([v, label]) => (
+                  <button
+                    key={label}
+                    className={`mode-tab ${voicePref === v ? "mode-tab-on" : ""}`}
+                    aria-pressed={voicePref === v}
+                    onClick={() => setVoicePref(v)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
             <span className="eyebrow">
               Sedute {Math.min(passed.length, REQUIRED_SESSIONS)}/{REQUIRED_SESSIONS}
             </span>
@@ -300,7 +328,7 @@ export default function Game() {
           />
         )}
         {phase === "session" && live && (
-          <Session live={live} setLive={setLive} onEnd={endSession} ai={ai} />
+          <Session live={live} setLive={setLive} onEnd={endSession} ai={ai} voice={voice} />
         )}
         {phase === "debrief" && debrief && (
           <Debrief
@@ -547,11 +575,14 @@ function Session({
   setLive: commit,
   onEnd,
   ai,
+  voice,
 }: {
   live: Live;
   setLive: (l: Live) => void;
   onEnd: (l: Live) => void;
   ai: boolean;
+  /** Variante vocale: l'esaminatore parla e si può rispondere al microfono. */
+  voice: boolean;
 }) {
   const [input, setInput] = useState("");
   // In attesa dell'esaminatore AI: la risposta appena inviata resta visibile ma non è ancora
@@ -813,6 +844,14 @@ function Session({
   const last = live.records[live.records.length - 1];
   const who: Who = live.isBoss ? "presidente" : ex!.id;
   const lastProf = live.transcript.map((m) => m.role).lastIndexOf("prof");
+  // Voce: ogni nuova battuta dell'esaminatore viene letta; passando a "Testo" si interrompe.
+  const { speak, stop, state: speech } = useSpeaker();
+  useEffect(() => {
+    if (voice && fresh) void speak(fresh, who, mood);
+    else stop();
+    // Solo una nuova battuta o il cambio di modalità devono far ripartire la voce.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fresh, voice]);
   // Battito: sale con la puntata dichiarata, con il Presidente e quando i crediti scendono.
   const stake = live.conf && live.conf !== "lacuna" ? CONFIDENCE[live.conf].mult * 18 : 0;
   const bpm = Math.min(
@@ -933,6 +972,21 @@ function Session({
                     <div className="min-w-0 flex-1">
                       <div className="mb-1 eyebrow text-pop">{profName}</div>
                       {m.text === fresh ? <Typewriter text={m.text} /> : m.text}
+                      {voice && (
+                        <button
+                          className="mt-2 flex min-h-11 items-center eyebrow text-pop underline disabled:no-underline disabled:opacity-60"
+                          disabled={speech === "loading"}
+                          onClick={() =>
+                            speech === "playing" ? stop() : void speak(m.text, who, mood)
+                          }
+                        >
+                          {speech === "loading"
+                            ? "Preparo la voce…"
+                            : speech === "playing"
+                              ? "■ Ferma la voce"
+                              : "▶ Riascolta"}
+                        </button>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -962,15 +1016,17 @@ function Session({
                   Sicurezza: {CONFIDENCE[live.conf as Confidence].label} · approfondimento{" "}
                   {live.asked}/{maxFU}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <textarea
                     autoFocus
                     aria-label="La tua risposta"
                     disabled={!!busy}
-                    className="field min-h-20 flex-1"
+                    className="field min-h-20 min-w-48 flex-1"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="Risponda all'esaminatore…"
+                    placeholder={
+                      voice ? "Parli o scriva la risposta…" : "Risponda all'esaminatore…"
+                    }
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
@@ -978,6 +1034,14 @@ function Session({
                       }
                     }}
                   />
+                  {voice && (
+                    <div className="self-end">
+                      <Mic
+                        disabled={!!busy}
+                        onText={(t) => setInput((v) => (v.trim() ? `${v.trim()} ${t}` : t))}
+                      />
+                    </div>
+                  )}
                   <button
                     className="btn-main self-end disabled:opacity-40"
                     disabled={!input.trim() || !!busy}

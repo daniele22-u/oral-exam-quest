@@ -34,6 +34,15 @@ Con una chiave Google Gemini le domande d'apertura, gli approfondimenti e la val
 
 La chiave resta sul server (`src/lib/game/server/gemini.ts`): non usare mai il prefisso `VITE_`, che la esporrebbe al browser. Le funzioni server in `src/lib/game/ai.ts` sono raggiungibili da chiunque apra il sito e non hanno limite di frequenza: prima di pubblicare, impostare un tetto di spesa sulla chiave.
 
+### Variante vocale (Testo / Voce)
+
+Con la chiave configurata compare in alto il selettore **Testo / Voce**. In modalità Voce l'esaminatore legge ogni battuta e si può rispondere al microfono: la registrazione viene trascritta nel campo di risposta, da rileggere prima di inviare. Tutto passa dalla stessa chiave Gemini, lato server.
+
+- Voce: `gemini-3.8-flash-lite-tts`, con ripiego su `gemini-3.8-flash-tts` (`GEMINI_TTS_MODEL` per cambiarlo).
+- Ascolto: `gemini-3.5-transcribe` (`GEMINI_STT_MODEL` per cambiarlo).
+- Il piano gratuito concede poche richieste al minuto ai modelli vocali: se la voce non è disponibile l'esame prosegue per iscritto.
+- L'audio dello studente viene inviato a Google solo per la trascrizione e non è salvato dall'app; risposte fino a 90 secondi.
+
 ## Struttura
 
 - `src/lib/game/data.ts` — esaminatori, livelli di sicurezza, argomenti e domande.
