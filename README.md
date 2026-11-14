@@ -1,33 +1,34 @@
-# Oral Exam Quest
+# Oral Exam Quest — "Commissione"
 
-Realizza un'applicazione web interattiva e giocabile: un simulatore di esame orale universitario gamificato (ispirato al concept "Poker della Sicurezza", ma declinato come Serious Game accademico senza riferimenti al gioco d'azzardo).
+Simulatore gamificato di esame orale universitario: un serious game accademico in cui non basta sapere, bisogna sapere _quanto_ si sa.
 
-Requisiti di Game Design e Funzionalità:
-1. Valuta e Meccaniche Accademiche (Niente gioco d'azzardo):
-- Valuta: "Crediti Fiducia" o "Punti Padronanza" (si parte con una quota iniziale per ogni seduta, accumulando crediti per convalidare la seduta).
-- Dichiarazione di Sicurezza: prima di rispondere a ogni domanda aperta, lo studente dichiara il proprio livello di convinzione (es. Prudente, Solido, Senza Rete).
-- Se dichiari "Senza Rete" (alta convinzione) e rispondi bene, guadagni molti più crediti, ma l'esaminatore ti mette sotto torchio con follow-up più incalzanti e rigorosi per "verificare se stai fingendo sicurezza".
-- Se non conosci l'argomento, non c'è un fold definitivo: puoi dichiarare "Rinvio a Giudizio / Lacuna riconosciuta" per evitare penalità disastrose, ma l'argomento viene registrato come debito formativo nel fascicolo dello studente.
+## Come si gioca
 
-2. Struttura a Sessioni Casuali (Meccanismo stile "Capipalestra Pokémon"):
-- Il percorso verso la verbalizzazione richiede di superare N partite/sedute preliminari (es. 3 sedute d'esame completate con successo).
-- Ogni seduta è casuale: viene estratto a sorte un esaminatore (tra 3 archetipi: Severo, Empatico, Distratto) e vengono estratti casualmente argomenti dal programma del corso (es. Signal Processing o Neuroengineering, oppure materia personalizzata).
-- Completare le N sedute preliminari sblocca l'accesso alla "Commissione Plenaria".
+1. **Scegli il programma**: Signal Processing, Neuroengineering o una materia personalizzata (nome del corso + almeno 3 argomenti).
+2. **Sedute preliminari**: ogni seduta estrae a sorte un esaminatore (Severa, Empatico, Distratto) e 3 argomenti. Si parte da 30 Crediti Fiducia; la seduta è convalidata con almeno 40.
+3. **Dichiarazione di sicurezza** prima di ogni domanda:
 
-3. Il Boss Finale ("Il Presidente di Commissione"):
-- Sbloccato dopo aver completato le sessioni preliminari.
-- Il Presidente ha accesso allo storico di tutte le partite precedenti: non fa domande a caso, ma ripropone esattamente gli argomenti in cui lo studente ha avuto i punteggi più bassi o ha dichiarato una lacuna.
-- Consapevolezza contestuale nei dialoghi: il Presidente esplicita il motivo della ripetizione ("So bene che con la collega ha tentennato su questo punto: le do l'occasione di riscattarsi"). Se lo studente commenta o protesta, il docente risponde a tono mantenendo il personaggio.
+   | Dichiarazione | Crediti se sufficiente | Penalità | Approfondimenti                          |
+   | ------------- | ---------------------- | -------- | ---------------------------------------- |
+   | Prudente      | ×1                     | −4       | 2                                        |
+   | Solido        | ×2                     | −10      | 3                                        |
+   | Senza Rete    | ×3                     | −20      | 4                                        |
+   | Lacuna        | —                      | −2       | nessuno (debito formativo nel fascicolo) |
 
-4. Dialogo Orale Interattivo e Valutazione AI:
-- Ogni domanda prevede uno scambio aperto con 2-4 follow-up dell'esaminatore in chat.
-- Sistema di scoring strutturato (accuratezza scientifica, completezza, tenuta logica).
-- Modalità demo interattiva e funzionante anche senza chiavi API esterne (con scenari e domande predefinite per Signal Processing e Neuroengineering), pronta per essere agganciata a Lovable AI / Supabase.
+4. **Commissione Plenaria**: dopo 3 sedute convalidate il Presidente ripropone gli argomenti peggiori di _tutto_ lo storico, sedute fallite comprese, e ricorda perché.
+5. **Verbale**: voto in trentesimi, indice di calibrazione della sicurezza, debiti formativi ancora aperti e cronologia espandibile con trascrizione, punteggi e spiegazione modello.
 
-5. Report Finale e Revisione Completa:
-- A fine esame, un report interattivo e navigabile mostra: voto finale, indice di calibrazione della sicurezza, e una timeline espandibile di ogni domanda affrontata con trascrizione della risposta dello studente, obiezioni del docente e spiegazione modello dell'argomento.
+Il fascicolo e la seduta in corso sono salvati nel browser (`localStorage`): ricaricando la pagina si riprende da dove si era rimasti.
 
-Visual design raffinato: atmosfera universitaria prestigiosa (verde foresta profondo, ardesia e accenti oro/ottone), elegante e accademica.
+## Valutazione
+
+La modalità demo funziona senza chiavi API. Il punteggio (0–10) combina accuratezza (concetti chiave del programma toccati, 50%), completezza (ampiezza della risposta, 25%) e tenuta logica (connettivi argomentativi, 25%); la sufficienza è 6. È un'euristica a parole chiave, non una correzione di merito: `scoreAnswers` in `src/lib/game/engine.ts` è il punto in cui agganciare un valutatore AI.
+
+## Struttura
+
+- `src/lib/game/data.ts` — esaminatori, livelli di sicurezza, argomenti e domande.
+- `src/lib/game/engine.ts` — regole come funzioni pure (punteggio, crediti, calibrazione, voto, scelta degli argomenti del Presidente), con test in `engine.test.ts`.
+- `src/components/game/Game.tsx` — interfaccia e flusso di gioco.
 
 This project was built with [Lovable](https://lovable.dev).
 
@@ -48,4 +49,6 @@ git clone <this-repository-url>
 cd <repository-name>
 npm i
 npm run dev
+npm test        # test delle regole di gioco
+npm run lint
 ```
