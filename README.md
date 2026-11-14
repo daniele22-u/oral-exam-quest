@@ -24,6 +24,16 @@ Il fascicolo e la seduta in corso sono salvati nel browser (`localStorage`): ric
 
 La modalità demo funziona senza chiavi API. Il punteggio (0–10) combina accuratezza (concetti chiave del programma toccati, 50%), completezza (ampiezza della risposta, 25%) e tenuta logica (connettivi argomentativi, 25%); la sufficienza è 6. È un'euristica a parole chiave, non una correzione di merito: `scoreAnswers` in `src/lib/game/engine.ts` è il punto in cui agganciare un valutatore AI.
 
+## Esaminatore AI (facoltativo)
+
+Con una chiave Google Gemini le domande d'apertura, gli approfondimenti e la valutazione finale sono generati in tempo reale: l'esaminatore reagisce a ciò che lo studente ha detto e il referto riporta un giudizio scritto. Senza chiave, o se il servizio non risponde, il gioco ripiega da solo sulla modalità demo.
+
+- In locale: file `.env.local` (ignorato da git) con `GEMINI_API_KEY=...`.
+- Su Lovable: stesso nome nei Secrets del progetto.
+- Facoltativi: `GEMINI_MODEL` (predefinito `gemini-flash-lite-latest`, scelto perché risponde in circa un secondo) e `GEMINI_EVAL_MODEL` per usare un modello più capace solo nel giudizio finale.
+
+La chiave resta sul server (`src/lib/game/server/gemini.ts`): non usare mai il prefisso `VITE_`, che la esporrebbe al browser. Le funzioni server in `src/lib/game/ai.ts` sono raggiungibili da chiunque apra il sito e non hanno limite di frequenza: prima di pubblicare, impostare un tetto di spesa sulla chiave.
+
 ## Struttura
 
 - `src/lib/game/data.ts` — esaminatori, livelli di sicurezza, argomenti e domande.

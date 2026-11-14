@@ -8,6 +8,13 @@
 // hosting already compresses at the edge.
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { loadEnv } from "vite";
+
+// Sviluppo locale: rende disponibili alle funzioni server i segreti di .env.local (ignorato da
+// git). Finiscono solo in process.env del server, mai nel bundle del browser. In produzione il
+// valore arriva dai Secrets di Lovable e .env.local non esiste.
+for (const [k, v] of Object.entries(loadEnv("development", process.cwd(), "GEMINI_")))
+  process.env[k] ??= v;
 
 export default defineConfig({
   tanstackStart: {

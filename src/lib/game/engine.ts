@@ -28,6 +28,10 @@ export interface QuestionRecord {
   coverage?: Coverage;
   /** Concetti chiave non toccati, con nome leggibile (assente nei fascicoli precedenti). */
   missed?: string[];
+  /** Giudizio scritto dell'esaminatore AI; assente in modalità demo. */
+  feedback?: string;
+  /** true se punteggio e punti carenti vengono dal valutatore AI anziché dalle parole chiave. */
+  ai?: boolean;
 }
 export interface Coverage {
   hit: number;
@@ -82,6 +86,12 @@ export function missedConcepts(answers: string[], topic: Topic): string[] {
   );
 }
 
+/** Punteggio complessivo: l'accuratezza pesa metà, completezza e logica un quarto ciascuna. */
+export function withTotal(accuracy: number, completeness: number, logic: number): Score {
+  const total = Math.round((accuracy * 0.5 + completeness * 0.25 + logic * 0.25) * 10) / 10;
+  return { accuracy, completeness, logic, total };
+}
+
 /** Valutazione demo deterministica: parole chiave, lunghezza, connettivi logici. */
 export function scoreAnswers(answers: string[], topic: Topic): Score {
   const text = norm(answers.join(" "));
@@ -93,8 +103,7 @@ export function scoreAnswers(answers: string[], topic: Topic): Score {
     text.match(/\b(perche|quindi|dunque|infatti|poiche|ovvero|cioe|se|allora|mentre)\b/g) || []
   ).length;
   const logic = Math.min(10, 3 + connectors * 2 + (words > 20 ? 1 : 0));
-  const total = Math.round((accuracy * 0.5 + completeness * 0.25 + logic * 0.25) * 10) / 10;
-  return { accuracy, completeness, logic, total };
+  return withTotal(accuracy, completeness, logic);
 }
 
 export function creditDelta(score: Score, conf: Confidence | "lacuna"): number {
@@ -209,6 +218,7 @@ export function sessionReportMarkdown(s: SessionRecord, title: string, date: str
     L.push(`### ${q.topicTitle} (${q.score.total}/10)`, "");
     for (const d of diagnose(q)) L.push(`- ${d}`);
     if (q.missed?.length) L.push(`- Concetti non toccati: ${q.missed.join(", ")}.`);
+    if (q.feedback) L.push("", `**Giudizio dell'esaminatore.** ${q.feedback}`);
     L.push("", `**Cosa avrebbe dovuto dire.** ${q.model}`, "");
   }
 
@@ -225,10 +235,13 @@ export function sessionReportMarkdown(s: SessionRecord, title: string, date: str
     L.pop();
     L.push("");
   }
-  L.push(
-    "---",
-    "Analisi automatica basata sui concetti chiave del programma presenti nelle risposte: indica cosa ripassare, non sostituisce il giudizio di un docente.",
-    "",
-  );
+  L.push("---", reportDisclaimer(s), "");
   return L.join("\n");
+}
+
+/** Dichiara come è stata prodotta l'analisi: valutatore AI oppure parole chiave. */
+export function reportDisclaimer(s: SessionRecord): string {
+  return s.questions.some((q) => q.ai)
+    ? "Analisi generata da un modello AI sulla trascrizione delle risposte: può sbagliare, indica cosa ripassare e non sostituisce il giudizio di un docente."
+    : "Analisi automatica basata sui concetti chiave del programma presenti nelle risposte: indica cosa ripassare, non sostituisce il giudizio di un docente.";
 }

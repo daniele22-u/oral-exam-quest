@@ -19,6 +19,8 @@ import {
   diagnose,
   isWeak,
   sessionReportMarkdown,
+  reportDisclaimer,
+  withTotal,
   creditDelta,
   calibration,
   finalGrade,
@@ -29,6 +31,7 @@ import {
   type SessionRecord,
   type Turn,
 } from "@/lib/game/engine";
+import { aiStatus, evaluateAnswers, examinerSay } from "@/lib/game/ai";
 
 type Phase = "home" | "setup" | "hub" | "session" | "debrief" | "report";
 
@@ -132,6 +135,13 @@ export default function Game() {
   const passed = prelim.filter((s) => s.passed);
   const boss = sessions.find((s) => s.examiner === "presidente" && s.passed);
   const [debriefId, setDebriefId] = useState<string | null>(null);
+  // Esaminatore AI disponibile solo se il server ha una chiave: altrimenti modalità demo.
+  const [ai, setAi] = useState(false);
+  useEffect(() => {
+    aiStatus()
+      .then((r) => setAi(r.enabled))
+      .catch(() => setAi(false));
+  }, []);
   const debrief = sessions.find((s) => s.id === debriefId);
 
   function startSession(isBoss: boolean) {
@@ -199,28 +209,57 @@ export default function Game() {
       <header className="border-b border-brass/30">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
           <button
-            onClick={() => leaveTo(sessions.length ? "hub" : "home")}
+            onClick={() => leaveTo("home")}
             className="font-display text-2xl tracking-wide text-brass"
           >
             Commissione
           </button>
-          <div className="flex items-center gap-4 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+          <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+            <span
+              className={ai ? "text-brass" : ""}
+              title={
+                ai
+                  ? "Domande e valutazione generate da un modello AI"
+                  : "Domande predefinite e valutazione a parole chiave"
+              }
+            >
+              {ai ? "Esaminatore AI" : "Modalità demo"}
+            </span>
             <span>
               Sedute {Math.min(passed.length, REQUIRED_SESSIONS)}/{REQUIRED_SESSIONS}
             </span>
+            <button
+              className={`uppercase tracking-[0.2em] hover:text-brass ${phase === "home" ? "text-brass" : ""}`}
+              onClick={() => leaveTo("home")}
+            >
+              Home
+            </button>
             {sessions.length > 0 && (
-              <button
-                className="uppercase tracking-[0.2em] hover:text-brass"
-                onClick={() => leaveTo("report")}
-              >
-                Fascicolo
-              </button>
+              <>
+                <button
+                  className={`uppercase tracking-[0.2em] hover:text-brass ${phase === "hub" ? "text-brass" : ""}`}
+                  onClick={() => leaveTo("hub")}
+                >
+                  Percorso
+                </button>
+                <button
+                  className={`uppercase tracking-[0.2em] hover:text-brass ${phase === "report" ? "text-brass" : ""}`}
+                  onClick={() => leaveTo("report")}
+                >
+                  Fascicolo
+                </button>
+              </>
             )}
           </div>
         </div>
       </header>
       <main className="mx-auto max-w-5xl px-6 py-10">
-        {phase === "home" && <Home onStart={() => setPhase("setup")} />}
+        {phase === "home" && (
+          <Home
+            resume={sessions.length > 0}
+            onStart={() => setPhase(sessions.length ? "hub" : "setup")}
+          />
+        )}
         {phase === "setup" && (
           <Setup
             course={course}
@@ -251,7 +290,7 @@ export default function Game() {
           />
         )}
         {phase === "session" && live && (
-          <Session live={live} setLive={setLive} onEnd={endSession} />
+          <Session live={live} setLive={setLive} onEnd={endSession} ai={ai} />
         )}
         {phase === "debrief" && debrief && (
           <Debrief
@@ -282,7 +321,7 @@ export default function Game() {
   );
 }
 
-function Home({ onStart }: { onStart: () => void }) {
+function Home({ onStart, resume }: { onStart: () => void; resume: boolean }) {
   return (
     <section className="py-12 text-center">
       <p className="text-xs uppercase tracking-[0.4em] text-brass">Simulatore d'esame orale</p>
@@ -322,7 +361,7 @@ function Home({ onStart }: { onStart: () => void }) {
         ))}
       </div>
       <button onClick={onStart} className="btn-brass mt-12">
-        Entra in aula
+        {resume ? "Riprendi il percorso" : "Entra in aula"}
       </button>
     </section>
   );
@@ -504,14 +543,31 @@ function Hub({
 
 function Session({
   live,
-  setLive,
+  setLive: commit,
   onEnd,
+  ai,
 }: {
   live: Live;
   setLive: (l: Live) => void;
   onEnd: (l: Live) => void;
+  ai: boolean;
 }) {
   const [input, setInput] = useState("");
+  // In attesa dell'esaminatore AI: la risposta appena inviata resta visibile ma non è ancora
+  // salvata, così una ricarica a metà attesa non lascia la seduta in uno stato incompleto.
+  const [busy, setBusy] = useState<string | null>(null);
+  const [pending, setPending] = useState<string | null>(null);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  // Dopo un'attesa la seduta può essere stata abbandonata: in quel caso non va ripristinata.
+  const setLive = (l: Live) => {
+    if (mounted.current) commit(l);
+  };
   const endRef = useRef<HTMLDivElement>(null);
   const topic = live.topics[live.idx]!;
   const ex = live.examiner;
@@ -519,9 +575,41 @@ function Session({
   const maxFU = live.conf && live.conf !== "lacuna" ? CONFIDENCE[live.conf].followUps : 0;
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [live.transcript.length]);
+  }, [live.transcript.length, pending, busy]);
 
-  function declare(conf: Confidence | "lacuna") {
+  /** Battuta dell'esaminatore AI, oppure il testo predefinito se l'AI non è disponibile. */
+  async function profLine(
+    kind: "open" | "followup",
+    conf: Confidence,
+    transcript: Turn[],
+    remaining: number,
+    fallback: string,
+  ): Promise<string> {
+    if (!ai) return fallback;
+    try {
+      const note = live.bossNotes[topic.id];
+      const r = await examinerSay({
+        data: {
+          kind,
+          course: topic.course,
+          topicTitle: topic.title,
+          transcript,
+          baseQuestion: topic.question,
+          examinerName: profName,
+          examinerTrait: ex ? ex.trait : "Autorevole, severo ma giusto; conosce il fascicolo.",
+          isBoss: live.isBoss,
+          ...(note ? { bossNote: note } : {}),
+          confidence: conf,
+          remaining,
+        },
+      });
+      return r.ok ? r.text : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  async function declare(conf: Confidence | "lacuna") {
     if (conf === "lacuna") {
       const score = { accuracy: 0, completeness: 0, logic: 0, total: 0 };
       const t: Turn[] = [
@@ -564,21 +652,25 @@ function Session({
           ? " E visto che si dichiara senza rete, non le concederò nulla."
           : " " + pick(ex!.doubt)
         : "";
+    setBusy("L'esaminatore formula la domanda…");
+    const opening = await profLine("open", conf, [], 0, intro + topic.question + pressure);
+    setBusy(null);
     // Gli approfondimenti vengono estratti a sorte: rigiocare lo stesso argomento non ripete la stessa sequenza.
     setLive({
       ...live,
       conf,
       step: "dialog",
-      transcript: [{ role: "prof", text: intro + topic.question + pressure }],
+      transcript: [{ role: "prof", text: opening }],
       answers: [],
       asked: 0,
       followUps: shuffle(topic.followUps),
     });
   }
 
-  function send() {
+  async function send() {
     const text = input.trim();
-    if (!text) return;
+    if (!text || busy) return;
+    const conf = live.conf as Confidence;
     setInput("");
     const t: Turn[] = [...live.transcript, { role: "student", text }];
     if (live.isBoss && isProtest(text)) {
@@ -604,12 +696,51 @@ function Session({
         : partial >= 5
           ? pick(ex!.praise) + " " + (live.conf === "senzarete" ? pick(ex!.doubt) : "")
           : pick(ex!.push);
-      t.push({ role: "prof", text: `${prefix} ${followUps[live.asked % followUps.length]}` });
+      setPending(text);
+      setBusy(`${profName} sta valutando la risposta…`);
+      const line = await profLine(
+        "followup",
+        conf,
+        t,
+        maxFU - live.asked - 1,
+        `${prefix} ${followUps[live.asked % followUps.length]}`,
+      );
+      setBusy(null);
+      setPending(null);
+      t.push({ role: "prof", text: line });
       setLive({ ...live, transcript: t, answers, asked: live.asked + 1 });
       return;
     }
-    const score = scoreAnswers(answers, topic);
-    const delta = creditDelta(score, live.conf!);
+    // Valutazione finale: AI sulla trascrizione intera, con ripiego sulle parole chiave.
+    let score = scoreAnswers(answers, topic);
+    let verdict: Pick<QuestionRecord, "coverage" | "missed" | "feedback" | "ai" | "model"> = {
+      coverage: keywordCoverage(answers, topic),
+      missed: missedConcepts(answers, topic),
+      model: topic.model,
+    };
+    if (ai) {
+      setPending(text);
+      setBusy("La commissione delibera…");
+      try {
+        const r = await evaluateAnswers({
+          data: { course: topic.course, topicTitle: topic.title, transcript: t },
+        });
+        if (r.ok) {
+          score = withTotal(r.accuracy, r.completeness, r.logic);
+          verdict = {
+            missed: r.missed,
+            feedback: r.feedback,
+            ai: true,
+            model: r.model || topic.model,
+          };
+        }
+      } catch {
+        /* resta la valutazione a parole chiave */
+      }
+      setBusy(null);
+      setPending(null);
+    }
+    const delta = creditDelta(score, conf);
     t.push({
       role: "prof",
       text:
@@ -621,14 +752,12 @@ function Session({
       topicId: topic.id,
       topicTitle: topic.title,
       course: topic.course,
-      confidence: live.conf!,
+      confidence: conf,
       transcript: t,
       score,
       delta,
-      model: topic.model,
       examiner: profName,
-      coverage: keywordCoverage(answers, topic),
-      missed: missedConcepts(answers, topic),
+      ...verdict,
     };
     setLive({
       ...live,
@@ -709,7 +838,8 @@ function Session({
                 <button
                   key={c}
                   onClick={() => declare(c)}
-                  className="panel p-4 text-left transition hover:border-brass hover:-translate-y-0.5"
+                  disabled={!!busy}
+                  className="panel p-4 text-left transition hover:border-brass hover:-translate-y-0.5 disabled:pointer-events-none disabled:opacity-50"
                 >
                   <div className="font-display text-xl text-brass">{CONFIDENCE[c].label}</div>
                   <div className="mt-1 text-xs text-muted-foreground">{CONFIDENCE[c].desc}</div>
@@ -720,9 +850,18 @@ function Session({
                 </button>
               ))}
             </div>
-            <button onClick={() => declare("lacuna")} className="btn-ghost mt-4 w-full">
+            <button
+              onClick={() => declare("lacuna")}
+              disabled={!!busy}
+              className="btn-ghost mt-4 w-full disabled:pointer-events-none disabled:opacity-50"
+            >
               Rinvio a giudizio · Lacuna riconosciuta (−2, registrata come debito formativo)
             </button>
+            {busy && (
+              <div className="mt-4">
+                <Busy text={busy} />
+              </div>
+            )}
           </div>
         )}
 
@@ -740,6 +879,15 @@ function Session({
                   {m.text}
                 </div>
               ))}
+              {pending && (
+                <div className="ml-auto max-w-[85%] rounded-lg border border-brass/30 bg-brass/15 px-4 py-3 text-sm leading-relaxed">
+                  <div className="mb-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                    Studente
+                  </div>
+                  {pending}
+                </div>
+              )}
+              {busy && <Busy text={busy} />}
               <div ref={endRef} />
             </div>
             {live.step === "dialog" && (
@@ -752,6 +900,7 @@ function Session({
                   <textarea
                     autoFocus
                     aria-label="La tua risposta"
+                    disabled={!!busy}
                     className="field min-h-20 flex-1"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
@@ -765,7 +914,7 @@ function Session({
                   />
                   <button
                     className="btn-brass self-end disabled:opacity-40"
-                    disabled={!input.trim()}
+                    disabled={!input.trim() || !!busy}
                     onClick={send}
                   >
                     Rispondi
@@ -791,6 +940,14 @@ function Session({
                   </button>
                 </div>
                 <Coverage q={last} />
+                {last.feedback && (
+                  <div className="mt-3 rounded-md border border-brass/30 p-4 text-sm">
+                    <div className="text-xs uppercase tracking-widest text-brass">
+                      Giudizio dell'esaminatore
+                    </div>
+                    <p className="mt-1 leading-relaxed">{last.feedback}</p>
+                  </div>
+                )}
                 <details className="mt-3 rounded-md bg-secondary p-4 text-sm">
                   <summary className="cursor-pointer text-xs uppercase tracking-widest text-brass">
                     Spiegazione modello
@@ -825,6 +982,15 @@ function ScoreBars({ s }: { s: QuestionRecord["score"] }) {
         </div>
       ))}
       <div className="mt-1 font-semibold">Totale {s.total}/10</div>
+    </div>
+  );
+}
+
+function Busy({ text }: { text: string }) {
+  return (
+    <div role="status" className="flex items-center gap-2 text-sm italic text-muted-foreground">
+      <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-brass" />
+      {text}
     </div>
   );
 }
@@ -903,10 +1069,15 @@ function Debrief({
                 <li key={d}>{d}</li>
               ))}
             </ul>
+            {q.feedback && (
+              <p className="mt-3 border-l-2 border-brass pl-4 text-sm leading-relaxed">
+                {q.feedback}
+              </p>
+            )}
             {q.missed && q.missed.length > 0 && (
               <div className="mt-4">
                 <div className="text-xs uppercase tracking-widest text-muted-foreground">
-                  Concetti che non ha toccato
+                  {q.ai ? "Concetti mancanti o sbagliati" : "Concetti che non ha toccato"}
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {q.missed.map((m) => (
@@ -944,10 +1115,7 @@ function Debrief({
         </>
       )}
 
-      <p className="mt-8 text-xs text-muted-foreground">
-        Analisi automatica basata sui concetti chiave del programma presenti nelle sue risposte:
-        indica cosa ripassare, non sostituisce il giudizio di un docente.
-      </p>
+      <p className="mt-8 text-xs text-muted-foreground">{reportDisclaimer(s)}</p>
       <div className="mt-6 flex flex-wrap gap-3">
         <button className="btn-brass" onClick={save}>
           Scarica il referto
