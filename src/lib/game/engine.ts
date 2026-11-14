@@ -112,13 +112,21 @@ export function creditDelta(score: Score, conf: Confidence | "lacuna"): number {
   return score.total >= 6 ? Math.round(score.total * c.mult) : -c.penalty;
 }
 
+const EXPECTED: Record<Confidence | "lacuna", number> = {
+  prudente: 4.5,
+  solido: 6.5,
+  senzarete: 8.5,
+  lacuna: 0,
+};
+/** Resa (0-10) che una dichiarazione di sicurezza lascia attendere. */
+export const expectedScore = (conf: Confidence | "lacuna") => EXPECTED[conf];
+
 /** Indice di calibrazione 0-100: quanto la sicurezza dichiarata corrisponde alla resa. */
 export function calibration(qs: QuestionRecord[]): number {
   if (!qs.length) return 0;
   // Una lacuna dichiarata è una previsione esatta della propria resa (0): non deve abbassare l'indice.
-  const exp: Record<string, number> = { prudente: 4.5, solido: 6.5, senzarete: 8.5, lacuna: 0 };
   const err =
-    qs.reduce((a, q) => a + Math.abs((exp[q.confidence] ?? 5) - q.score.total), 0) / qs.length;
+    qs.reduce((a, q) => a + Math.abs(expectedScore(q.confidence) - q.score.total), 0) / qs.length;
   return Math.max(0, Math.round(100 - err * 12));
 }
 

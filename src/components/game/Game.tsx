@@ -33,7 +33,8 @@ import {
 } from "@/lib/game/engine";
 import { aiStatus, evaluateAnswers, examinerSay } from "@/lib/game/ai";
 import { Portrait, type Mood, type Who } from "./Portrait";
-import { DungeonMap } from "./Dungeon";
+import { QuestMap } from "./QuestMap";
+import { Coins, GapBars, Heart, Pulse } from "./Vitals";
 
 type Phase = "home" | "setup" | "hub" | "session" | "debrief" | "report";
 
@@ -212,13 +213,17 @@ export default function Game() {
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-6 px-6 py-2">
           <button
             onClick={() => leaveTo("home")}
-            className="flex min-h-11 items-center font-display text-lg text-brass"
+            className="flex min-h-11 items-center gap-2 font-display text-3xl uppercase leading-none tracking-wide"
+            aria-label="Oral Exam Quest, pagina iniziale"
           >
-            Commissione
+            <Heart size={22} />
+            <span>
+              Oral Exam <span className="text-quest-red">Quest</span>
+            </span>
           </button>
           <nav className="flex flex-wrap items-center justify-end gap-x-5 text-muted-foreground">
             <span
-              className={`eyebrow ${ai ? "text-brass" : ""}`}
+              className={`eyebrow ${ai ? "text-pop" : ""}`}
               title={
                 ai
                   ? "Domande e valutazione generate da un modello AI"
@@ -329,12 +334,14 @@ export default function Game() {
 function Home({ onStart, resume }: { onStart: () => void; resume: boolean }) {
   return (
     <section className="py-12 text-center">
-      <p className="eyebrow text-brass">Simulatore d'esame orale</p>
-      <h1 className="mt-6 font-display text-3xl leading-snug md:text-5xl">
-        Non basta sapere.
-        <br />
-        <em className="not-italic text-brass">Devi sapere quanto sai.</em>
+      <p className="eyebrow text-pop">Simulatore d'esame orale</p>
+      <h1 className="quest-logo mt-4 text-7xl md:text-9xl">
+        Oral Exam
+        <em>Quest</em>
       </h1>
+      <p className="mt-8 font-display text-3xl leading-none md:text-4xl">
+        Non basta sapere. <span className="text-destructive">Devi sapere quanto sai.</span>
+      </p>
       <p className="mx-auto mt-8 max-w-2xl text-lg text-muted-foreground">
         Supera tre sedute preliminari con esaminatori estratti a sorte, dichiara la tua sicurezza
         prima di ogni risposta e affronta infine il Presidente di Commissione, che conosce ogni tuo
@@ -359,13 +366,13 @@ function Home({ onStart, resume }: { onStart: () => void; resume: boolean }) {
           ],
         ].map(([n, t, d]) => (
           <div key={n} className="panel p-5">
-            <div className="font-display text-xl text-brass">{n}</div>
+            <div className="font-display text-4xl leading-none text-pop">{n}</div>
             <div className="mt-2 font-semibold">{t}</div>
             <p className="mt-1 text-sm text-muted-foreground">{d}</p>
           </div>
         ))}
       </div>
-      <button onClick={onStart} className="btn-brass mt-12">
+      <button onClick={onStart} className="btn-main mt-12">
         {resume ? "Riprendi il percorso" : "Entra in aula"}
       </button>
     </section>
@@ -394,7 +401,7 @@ function Setup({
   const ok = count >= 3;
   return (
     <section className="mx-auto max-w-2xl">
-      <h2 className="font-display text-2xl">Programma d'esame</h2>
+      <h2 className="font-display text-4xl leading-none">Programma d'esame</h2>
       <p className="mt-2 text-muted-foreground">
         Gli argomenti di ogni seduta vengono estratti a sorte da questo programma.
       </p>
@@ -405,7 +412,7 @@ function Setup({
             onClick={() => setCourse(c)}
             className={`panel p-4 text-left transition ${course === c ? "panel-on" : ""}`}
           >
-            <div className="font-display text-base">
+            <div className="font-display text-2xl leading-none">
               {c === "custom" ? "Materia personalizzata" : c}
             </div>
             <div className="text-sm text-muted-foreground">
@@ -439,11 +446,11 @@ function Setup({
         </div>
       )}
       <div className="panel mt-6 p-4 text-sm text-muted-foreground">
-        Regole: ogni seduta parte da <b className="text-brass">{START_CREDITS} Crediti Fiducia</b> e
-        si convalida con almeno <b className="text-brass">{PASS_THRESHOLD}</b>. Servono{" "}
+        Regole: ogni seduta parte da <b className="text-pop">{START_CREDITS} Crediti Fiducia</b> e
+        si convalida con almeno <b className="text-pop">{PASS_THRESHOLD}</b>. Servono{" "}
         {REQUIRED_SESSIONS} sedute convalidate per accedere alla Commissione Plenaria.
       </div>
-      <button disabled={!ok} onClick={onGo} className="btn-brass mt-8 disabled:opacity-40">
+      <button disabled={!ok} onClick={onGo} className="btn-main mt-8 disabled:opacity-40">
         Conferma programma
       </button>
     </section>
@@ -476,12 +483,12 @@ function Hub({
     <section>
       {last && (
         <div
-          className={`panel mb-8 border-l-4 p-5 ${last.passed ? "border-l-brass" : "border-l-destructive"}`}
+          className={`panel mb-8 border-l-4 p-5 ${last.passed ? "border-l-quest-green" : "border-l-destructive"}`}
         >
           <div className="eyebrow text-muted-foreground">
             Esito ultima seduta · {last.examinerName}
           </div>
-          <div className="mt-1 font-display text-lg">
+          <div className="mt-1 font-display text-2xl leading-none">
             {last.passed ? "Seduta convalidata" : "Seduta non convalidata"} — {last.credits} crediti
           </div>
           {!last.passed && (
@@ -491,15 +498,15 @@ function Hub({
           )}
         </div>
       )}
-      <h2 className="font-display text-2xl">Il percorso verso il verbale</h2>
+      <h2 className="font-display text-4xl leading-none">Il percorso verso il verbale</h2>
       <p className="mt-1 text-muted-foreground">
         {course} ·{" "}
-        <button className="underline hover:text-brass" onClick={onSetup}>
+        <button className="underline hover:text-pop" onClick={onSetup}>
           cambia programma
         </button>
       </p>
       <div className="mt-8">
-        <DungeonMap
+        <QuestMap
           required={REQUIRED_SESSIONS}
           passed={passed}
           bossPassed={boss}
@@ -508,17 +515,17 @@ function Hub({
       </div>
       <div className="mt-10 flex flex-wrap gap-3">
         {!unlocked && (
-          <button className="btn-brass" onClick={onSession}>
+          <button className="btn-main" onClick={onSession}>
             Estrai una seduta
           </button>
         )}
         {unlocked && !boss && (
-          <button className="btn-brass" onClick={onBoss}>
+          <button className="btn-main" onClick={onBoss}>
             Presentati al Presidente
           </button>
         )}
         {boss && (
-          <button className="btn-brass" onClick={onReport}>
+          <button className="btn-main" onClick={onReport}>
             Leggi il verbale finale
           </button>
         )}
@@ -806,6 +813,16 @@ function Session({
   const last = live.records[live.records.length - 1];
   const who: Who = live.isBoss ? "presidente" : ex!.id;
   const lastProf = live.transcript.map((m) => m.role).lastIndexOf("prof");
+  // Battito: sale con la puntata dichiarata, con il Presidente e quando i crediti scendono.
+  const stake = live.conf && live.conf !== "lacuna" ? CONFIDENCE[live.conf].mult * 18 : 0;
+  const bpm = Math.min(
+    180,
+    68 +
+      (live.step === "result" ? 0 : stake) +
+      (live.isBoss ? 16 : 0) +
+      Math.max(0, START_CREDITS - live.credits) +
+      (live.step === "dialog" ? live.asked * 4 : 0),
+  );
 
   return (
     <section className="grid gap-6 md:grid-cols-[260px_1fr]">
@@ -813,15 +830,27 @@ function Session({
         <div className="mb-4 hidden md:block">
           <Portrait who={who} mood={mood} name={profName} size={128} />
         </div>
-        <div className="eyebrow text-brass">{live.isBoss ? PRESIDENT.title : ex!.title}</div>
-        <div className="mt-1 font-display text-lg">{profName}</div>
+        <div className="eyebrow text-pop">{live.isBoss ? PRESIDENT.title : ex!.title}</div>
+        <div className="mt-1 font-display text-2xl leading-none">{profName}</div>
         <p className="mt-2 text-sm text-muted-foreground">
           {live.isBoss ? "Ha davanti a sé il suo fascicolo completo." : ex!.trait}
         </p>
-        <div className="mt-6 border-t border-brass/20 pt-4">
+        <div className="mt-6 border-t-2 border-ink/15 pt-4">
           <div className="eyebrow text-muted-foreground">Crediti Fiducia</div>
-          <div className="font-display text-4xl text-brass">{live.credits}</div>
-          <div className="meter mt-2">
+          <div className="font-display text-6xl leading-none">{live.credits}</div>
+          <div
+            className="meter mt-2"
+            style={
+              {
+                "--fill":
+                  live.credits >= PASS_THRESHOLD
+                    ? "var(--quest-green)"
+                    : live.credits >= START_CREDITS
+                      ? "var(--quest-yellow)"
+                      : "var(--quest-red)",
+              } as React.CSSProperties
+            }
+          >
             <div
               style={{
                 width: `${Math.min(100, Math.max(0, (live.credits / PASS_THRESHOLD) * 100))}%`,
@@ -832,6 +861,10 @@ function Session({
             Soglia di convalida: {PASS_THRESHOLD}
           </div>
         </div>
+        <div className="mt-4 border-t-2 border-ink/15 pt-4">
+          <div className="eyebrow mb-1 text-muted-foreground">Tensione</div>
+          <Pulse bpm={bpm} />
+        </div>
         <div className="mt-4 text-sm text-muted-foreground">
           Domanda {live.idx + 1} di {live.topics.length}
         </div>
@@ -839,12 +872,12 @@ function Session({
 
       <div className="panel flex min-h-[560px] flex-col p-6">
         <div className="eyebrow text-muted-foreground">{topic.course}</div>
-        <h2 className="font-display text-xl">{topic.title}</h2>
+        <h2 className="font-display text-3xl leading-none">{topic.title}</h2>
 
         {live.step === "declare" && (
           <div className="mt-6">
             {live.isBoss && live.bossNotes[topic.id] && (
-              <p className="mb-4 border-l-2 border-brass pl-4 font-display text-sm">
+              <p className="mb-4 border-l-4 border-quest-yellow pl-4 font-display text-xl leading-none">
                 «{live.bossNotes[topic.id]}»
               </p>
             )}
@@ -860,7 +893,12 @@ function Session({
                   disabled={!!busy}
                   className="panel p-4 text-left transition disabled:pointer-events-none disabled:opacity-50"
                 >
-                  <div className="font-display text-base text-brass">{CONFIDENCE[c].label}</div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-display text-3xl leading-none">
+                      {CONFIDENCE[c].label}
+                    </span>
+                    <Coins n={CONFIDENCE[c].mult} />
+                  </div>
                   <div className="mt-1 text-xs text-muted-foreground">{CONFIDENCE[c].desc}</div>
                   <div className="mt-3 text-xs">
                     ×{CONFIDENCE[c].mult} crediti · −{CONFIDENCE[c].penalty} se insufficiente ·{" "}
@@ -893,7 +931,7 @@ function Session({
                   <div key={i} className="dialog-box">
                     <Portrait who={who} mood={mood} name={profName} size={72} />
                     <div className="min-w-0 flex-1">
-                      <div className="mb-1 eyebrow text-brass">{profName}</div>
+                      <div className="mb-1 eyebrow text-pop">{profName}</div>
                       {m.text === fresh ? <Typewriter text={m.text} /> : m.text}
                     </div>
                   </div>
@@ -941,7 +979,7 @@ function Session({
                     }}
                   />
                   <button
-                    className="btn-brass self-end disabled:opacity-40"
+                    className="btn-main self-end disabled:opacity-40"
                     disabled={!input.trim() || !!busy}
                     onClick={send}
                   >
@@ -954,30 +992,29 @@ function Session({
               </div>
             )}
             {live.step === "result" && last && (
-              <div className="mt-4 border-t border-brass/20 pt-4">
+              <div className="mt-4 border-t-2 border-ink/15 pt-4">
                 <div className="flex flex-wrap items-end gap-6">
                   <ScoreBars s={last.score} />
+                  <GapBars q={last} />
                   <div
-                    className={`font-display text-2xl ${last.delta >= 0 ? "text-brass" : "text-destructive"}`}
+                    className={`font-display text-5xl leading-none ${last.delta >= 0 ? "text-[var(--green-ink)]" : "text-destructive"}`}
                   >
                     {last.delta >= 0 ? "+" : ""}
                     {last.delta}
                   </div>
-                  <button className="btn-brass ml-auto" onClick={next}>
+                  <button className="btn-main ml-auto" onClick={next}>
                     {live.idx + 1 >= live.topics.length ? "Chiudi la seduta" : "Prossimo argomento"}
                   </button>
                 </div>
                 <Coverage q={last} />
                 {last.feedback && (
-                  <div className="mt-3 rounded-md border border-brass/30 p-4 text-sm">
-                    <div className="eyebrow text-brass">Giudizio dell'esaminatore</div>
+                  <div className="mt-3 border-2 border-ink p-4 text-sm">
+                    <div className="eyebrow text-pop">Giudizio dell'esaminatore</div>
                     <p className="mt-1 leading-relaxed">{last.feedback}</p>
                   </div>
                 )}
                 <details className="mt-3 rounded-md bg-secondary p-4 text-sm">
-                  <summary className="cursor-pointer eyebrow text-brass">
-                    Spiegazione modello
-                  </summary>
+                  <summary className="cursor-pointer eyebrow text-pop">Spiegazione modello</summary>
                   <p className="mt-2 leading-relaxed">{last.model}</p>
                 </details>
               </div>
@@ -1048,7 +1085,7 @@ function Typewriter({ text }: { text: string }) {
 function Busy({ text }: { text: string }) {
   return (
     <div role="status" className="flex items-center gap-2 text-sm italic text-muted-foreground">
-      <span className="inline-block h-2.5 w-2.5 animate-pulse bg-brass" />
+      <span className="inline-block h-2.5 w-2.5 animate-pulse bg-quest-red" />
       {text}
     </div>
   );
@@ -1097,8 +1134,8 @@ function Debrief({
     );
   return (
     <section>
-      <div className="eyebrow text-brass">Referto di seduta</div>
-      <h2 className="mt-2 font-display text-2xl">
+      <div className="eyebrow text-pop">Referto di seduta</div>
+      <h2 className="mt-2 font-display text-4xl leading-none">
         {title} · {s.examinerName}
       </h2>
       <div className="mt-6 grid gap-4 md:grid-cols-3">
@@ -1107,7 +1144,7 @@ function Debrief({
         <Stat label="Calibrazione sicurezza" value={`${calibration(s.questions)}%`} />
       </div>
 
-      <h3 className="mt-10 font-display text-xl">Punti carenti</h3>
+      <h3 className="mt-10 font-display text-3xl leading-none">Punti carenti</h3>
       {weak.length === 0 && (
         <p className="mt-3 text-muted-foreground">
           Nessun punto carente rilevato in questa seduta.
@@ -1117,11 +1154,14 @@ function Debrief({
         {weak.map((q, i) => (
           <div key={i} className="panel border-l-4 border-l-destructive p-5">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <div className="font-display text-lg">{q.topicTitle}</div>
+              <div className="font-display text-2xl leading-none">{q.topicTitle}</div>
               <div className="text-sm text-muted-foreground">
                 {q.confidence === "lacuna" ? "Lacuna riconosciuta" : CONFIDENCE[q.confidence].label}{" "}
                 · {q.score.total}/10
               </div>
+            </div>
+            <div className="mt-4">
+              <GapBars q={q} />
             </div>
             <ul className="mt-3 list-disc space-y-1 pl-5 text-sm">
               {diagnose(q).map((d) => (
@@ -1129,7 +1169,7 @@ function Debrief({
               ))}
             </ul>
             {q.feedback && (
-              <p className="mt-3 border-l-2 border-brass pl-4 text-sm leading-relaxed">
+              <p className="mt-3 border-l-4 border-quest-yellow pl-4 text-sm leading-relaxed">
                 {q.feedback}
               </p>
             )}
@@ -1148,7 +1188,7 @@ function Debrief({
               </div>
             )}
             <div className="mt-4 rounded-md bg-secondary p-4 text-sm">
-              <div className="eyebrow text-brass">Cosa avrebbe dovuto dire</div>
+              <div className="eyebrow text-pop">Cosa avrebbe dovuto dire</div>
               <p className="mt-1 leading-relaxed">{q.model}</p>
             </div>
           </div>
@@ -1157,7 +1197,7 @@ function Debrief({
 
       {strong.length > 0 && (
         <>
-          <h3 className="mt-10 font-display text-xl">Argomenti solidi</h3>
+          <h3 className="mt-10 font-display text-3xl leading-none">Argomenti solidi</h3>
           <ul className="mt-3 space-y-1 text-sm">
             {strong.map((q, i) => (
               <li key={i}>
@@ -1171,7 +1211,7 @@ function Debrief({
 
       <p className="mt-8 text-xs text-muted-foreground">{reportDisclaimer(s)}</p>
       <div className="mt-6 flex flex-wrap gap-3">
-        <button className="btn-brass" onClick={save}>
+        <button className="btn-main" onClick={save}>
           Scarica il referto
         </button>
         <button className="btn-ghost" onClick={onNext}>
@@ -1208,7 +1248,7 @@ function Report({
       <button className="btn-ghost" onClick={onBack}>
         ← Torna al percorso
       </button>
-      <div className="mt-6 eyebrow text-brass">
+      <div className="mt-6 eyebrow text-pop">
         {final ? "Verbale d'esame" : "Fascicolo provvisorio"}
       </div>
       <div className="mt-4 grid gap-4 md:grid-cols-4">
@@ -1239,17 +1279,19 @@ function Report({
           Il fascicolo è ancora vuoto: sostenga la prima seduta.
         </p>
       )}
-      <h3 className="mt-10 font-display text-xl">Cronologia</h3>
-      <ol className="mt-4 space-y-6 border-l border-brass/30 pl-6">
+      <h3 className="mt-10 font-display text-3xl leading-none">Cronologia</h3>
+      <ol className="mt-4 space-y-6 border-l-4 border-ink/30 pl-6">
         {sessions.map((s) => (
           <li key={s.id}>
-            <div className="font-display text-base">
+            <div className="font-display text-2xl leading-none">
               {sessionTitle(sessions, s)} · {s.examinerName}{" "}
-              <span className={`text-sm ${s.passed ? "text-brass" : "text-destructive"}`}>
+              <span
+                className={`text-sm ${s.passed ? "text-[var(--green-ink)]" : "text-destructive"}`}
+              >
                 ({s.passed ? "convalidata" : "non convalidata"}, {s.credits} crediti)
               </span>{" "}
               <button
-                className="eyebrow text-muted-foreground underline hover:text-brass"
+                className="eyebrow text-muted-foreground underline hover:text-pop"
                 onClick={() => onDebrief(s.id)}
               >
                 Referto
@@ -1274,20 +1316,22 @@ function Report({
                             : CONFIDENCE[q.confidence].label}
                         </span>
                       </span>
-                      <span className={q.delta >= 0 ? "text-brass" : "text-destructive"}>
+                      <span
+                        className={q.delta >= 0 ? "text-[var(--green-ink)]" : "text-destructive"}
+                      >
                         {q.score.total}/10 · {q.delta >= 0 ? "+" : ""}
                         {q.delta}
                       </span>
                     </button>
                     {open === k && (
-                      <div className="space-y-4 border-t border-brass/20 p-4 text-sm">
+                      <div className="space-y-4 border-t-2 border-ink/15 p-4 text-sm">
                         <ScoreBars s={q.score} />
                         <Coverage q={q} />
                         <div className="space-y-2">
                           {q.transcript.map((m, i) => (
                             <p key={i}>
                               <span
-                                className={`eyebrow ${m.role === "prof" ? "text-brass" : "text-muted-foreground"}`}
+                                className={`eyebrow ${m.role === "prof" ? "text-pop" : "text-muted-foreground"}`}
                               >
                                 {m.role === "prof" ? q.examiner : "Studente"}
                               </span>
@@ -1297,7 +1341,7 @@ function Report({
                           ))}
                         </div>
                         <div className="rounded-md bg-secondary p-4">
-                          <div className="eyebrow text-brass">Spiegazione modello</div>
+                          <div className="eyebrow text-pop">Spiegazione modello</div>
                           <p className="mt-1">{q.model}</p>
                         </div>
                       </div>
@@ -1313,8 +1357,8 @@ function Report({
   );
 }
 const Stat = ({ label, value, big }: { label: string; value: string; big?: boolean }) => (
-  <div className={`panel p-5 ${big ? "border-brass glow" : ""}`}>
+  <div className={`panel p-5 ${big ? "panel-on" : ""}`}>
     <div className="eyebrow text-muted-foreground">{label}</div>
-    <div className="mt-2 font-display text-2xl text-brass">{value}</div>
+    <div className="mt-2 font-display text-4xl leading-none">{value}</div>
   </div>
 );

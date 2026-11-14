@@ -30,9 +30,14 @@
  */
 
 @theme inline {
-  --font-display: "Silkscreen", ui-monospace, "Courier New", monospace;
+  --font-display: "VT323", ui-monospace, "Courier New", monospace;
   --font-sans: "Karla", system-ui, sans-serif;
-  --color-brass: var(--brass);
+  --color-ink: var(--ink);
+  --color-pop: var(--pop);
+  --color-quest-red: var(--quest-red);
+  --color-quest-green: var(--quest-green);
+  --color-quest-yellow: var(--quest-yellow);
+  --color-quest-purple: var(--quest-purple);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -76,231 +81,177 @@
 }
 
 :root {
-  --brass: oklch(0.6 0.11 75);
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.208 0.042 265.755);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.968 0.007 247.896);
-  --accent-foreground: oklch(0.208 0.042 265.755);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.704 0.04 256.788);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.984 0.003 247.858);
-  --sidebar-foreground: oklch(0.129 0.042 264.695);
-  --sidebar-primary: oklch(0.208 0.042 265.755);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.968 0.007 247.896);
-  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
-  --sidebar-border: oklch(0.929 0.013 255.508);
-  --sidebar-ring: oklch(0.704 0.04 256.788);
-}
+  /*
+   * Palette "Oral Exam Quest": fondo quasi bianco, contorni blu notte, pochi colori piatti.
+   * Le varianti -ink sono le stesse tinte scurite quanto basta per reggere come testo o come
+   * fondo di testo bianco (contrasto di almeno 4.5:1); le tinte piene restano per i disegni.
+   */
+  --ink: oklch(0.23 0.045 285); /* #1a192e */
+  --paper: oklch(0.994 0 0); /* #fdfdfd */
+  --quest-red: oklch(0.62 0.2 20); /* #e03a49 */
+  --red-ink: oklch(0.53 0.2 20);
+  --quest-blue: oklch(0.56 0.19 262); /* #386ee0 */
+  --pop: oklch(0.5 0.19 262);
+  --quest-green: oklch(0.68 0.15 155); /* #38b271 */
+  --green-ink: oklch(0.5 0.13 155);
+  --quest-yellow: oklch(0.82 0.15 80); /* #f4b73a */
+  --quest-purple: oklch(0.5 0.21 285); /* #694ad7 */
+  --mist: oklch(0.9 0.012 255); /* #dbe0e7 */
 
-.dark {
   --radius: 0rem;
-  --brass: oklch(0.8 0.12 82);
-  --background: oklch(0.17 0.03 165);
-  --foreground: oklch(0.95 0.015 90);
-  --card: oklch(0.23 0.035 165);
-  --card-foreground: oklch(0.95 0.015 90);
-  --popover: oklch(0.23 0.035 165);
-  --popover-foreground: oklch(0.95 0.015 90);
-  --primary: oklch(0.78 0.11 80);
-  --primary-foreground: oklch(0.2 0.035 160);
-  --secondary: oklch(0.3 0.02 220);
-  --secondary-foreground: oklch(0.95 0.015 90);
-  --muted: oklch(0.3 0.02 200);
-  --muted-foreground: oklch(0.78 0.025 120);
-  --accent: oklch(0.3 0.03 165);
-  --accent-foreground: oklch(0.95 0.015 90);
-  --destructive: oklch(0.68 0.17 28);
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.42 0.04 160);
-  --input: oklch(0.5 0.04 160);
-  --ring: oklch(0.78 0.11 80);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.208 0.042 265.755);
-  --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.279 0.041 260.031);
-  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: oklch(1 0 0);
+  --card-foreground: var(--ink);
+  --popover: oklch(1 0 0);
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: var(--paper);
+  --secondary: oklch(0.96 0.008 255);
+  --secondary-foreground: var(--ink);
+  --muted: var(--mist);
+  --muted-foreground: oklch(0.45 0.035 280);
+  --accent: oklch(0.96 0.008 255);
+  --accent-foreground: var(--ink);
+  --destructive: var(--red-ink);
+  --destructive-foreground: var(--paper);
+  --border: var(--ink);
+  --input: var(--ink);
+  --ring: var(--pop);
+  --chart-1: var(--quest-red);
+  --chart-2: var(--quest-blue);
+  --chart-3: var(--quest-green);
+  --chart-4: var(--quest-yellow);
+  --chart-5: var(--quest-purple);
+  --sidebar: var(--paper);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--ink);
+  --sidebar-primary-foreground: var(--paper);
+  --sidebar-accent: var(--mist);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--ink);
+  --sidebar-ring: var(--pop);
 }
 
+/*
+ * Stile "Oral Exam Quest": fogli bianchi con contorno blu notte e ombra netta, titoli in font
+ * a pixel, testo lungo e campi in un font normale per la leggibilità. Regole seguite ovunque:
+ * colori piatti senza sfumature, bersagli di tocco di almeno 44px, fuoco da tastiera sempre
+ * visibile, nessun movimento se il sistema chiede di ridurlo.
+ */
 @layer base {
   * {
     border-color: var(--color-border);
   }
-
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
-  }
-}
-
-/*
- * Tema "dungeon a pixel": il mondo (cornici, pulsanti, barre, titoli) è a pixel, mentre testo
- * lungo e campi restano in un font normale per la leggibilità. Regole seguite ovunque:
- * colori piatti e bordi netti senza sfumature né ombre morbide, bersagli di tocco di almeno
- * 44px, fuoco da tastiera sempre visibile, nessun movimento se il sistema chiede di ridurlo.
- */
-@layer base {
-  body {
     font-family: var(--font-sans);
   }
   :focus-visible {
-    outline: 3px solid var(--brass);
+    outline: 3px solid var(--pop);
     outline-offset: 3px;
   }
 }
 
 @layer components {
-  /* Fondo: pietra scura con una trama a scacchi appena percepibile. */
   .academy-bg {
     background-color: var(--background);
-    background-image:
-      linear-gradient(
-        45deg,
-        oklch(1 0 0 / 0.025) 25%,
-        transparent 25% 75%,
-        oklch(1 0 0 / 0.025) 75%
-      ),
-      linear-gradient(
-        45deg,
-        oklch(1 0 0 / 0.025) 25%,
-        transparent 25% 75%,
-        oklch(1 0 0 / 0.025) 75%
-      );
-    background-size: 16px 16px;
-    background-position:
-      0 0,
-      8px 8px;
   }
 
-  /*
-   * Cornice a pixel: quattro ombre nette ai lati lasciano vuoti gli angoli, che risultano
-   * "a gradino". --pb è il colore della cornice, cambiato dalle varianti qui sotto.
-   */
+  /* Foglio: contorno netto e ombra piena spostata in basso a destra. --pb colora il contorno. */
   .panel {
-    --pb: var(--border);
+    --pb: var(--ink);
     background: var(--card);
-    margin: 4px;
-    box-shadow:
-      -4px 0 0 0 var(--pb),
-      4px 0 0 0 var(--pb),
-      0 -4px 0 0 var(--pb),
-      0 4px 0 0 var(--pb),
-      0 10px 0 0 oklch(0 0 0 / 0.45);
+    border: 3px solid var(--pb);
+    box-shadow: 5px 5px 0 0 var(--ink);
   }
-  .panel.border-brass,
-  .panel-on,
-  .glow {
-    --pb: var(--brass);
+  .panel-on {
+    --pb: var(--pop);
+    box-shadow: 5px 5px 0 0 var(--pop);
   }
   button.panel {
     cursor: pointer;
+    transition: transform 0.08s steps(2);
   }
   button.panel:hover {
-    --pb: var(--brass);
+    transform: translate(-2px, -2px);
+  }
+  button.panel:active {
+    transform: translate(3px, 3px);
+    box-shadow: 2px 2px 0 0 var(--ink);
+  }
+  /* Bordo sinistro di stato (esito, punti carenti): resta spesso anche dentro .panel. */
+  .panel.border-l-4 {
+    border-left-width: 10px;
   }
 
-  .btn-brass,
+  .btn-main,
   .btn-ghost {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     min-height: 44px;
-    margin: 4px;
-    padding: 0.5rem 1.5rem;
+    padding: 0.25rem 1.5rem;
+    border: 3px solid var(--ink);
     font-family: var(--font-display);
-    font-size: 0.875rem;
-    letter-spacing: 0;
+    font-size: 1.5rem;
+    line-height: 1.1;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
     cursor: pointer;
+    box-shadow: 4px 4px 0 0 var(--ink);
     transition: transform 0.08s steps(2);
   }
-  .btn-brass {
-    --edge: oklch(0.52 0.1 70);
-    background: var(--brass);
-    color: var(--primary-foreground);
-    box-shadow:
-      -4px 0 0 0 var(--edge),
-      4px 0 0 0 var(--edge),
-      0 -4px 0 0 var(--edge),
-      0 4px 0 0 var(--edge),
-      0 8px 0 0 oklch(0 0 0 / 0.5);
+  .btn-main {
+    background: var(--red-ink);
+    color: var(--paper);
   }
   .btn-ghost {
-    --edge: color-mix(in oklab, var(--brass) 55%, var(--background));
-    background: var(--background);
-    color: var(--foreground);
-    box-shadow:
-      -4px 0 0 0 var(--edge),
-      4px 0 0 0 var(--edge),
-      0 -4px 0 0 var(--edge),
-      0 4px 0 0 var(--edge);
+    background: var(--card);
+    color: var(--ink);
   }
-  .btn-brass:hover {
-    background: oklch(0.84 0.11 82);
-  }
+  .btn-main:hover,
   .btn-ghost:hover {
-    --edge: var(--brass);
-    color: var(--brass);
+    transform: translate(-2px, -2px);
   }
-  /* Pressione: il pulsante scende sul proprio "spessore". */
-  .btn-brass:active,
+  /* Pressione: il pulsante scende sulla propria ombra. */
+  .btn-main:active,
   .btn-ghost:active {
-    transform: translateY(4px);
+    transform: translate(3px, 3px);
+    box-shadow: 1px 1px 0 0 var(--ink);
   }
-  .btn-brass:disabled,
+  .btn-main:disabled,
   .btn-ghost:disabled {
     cursor: not-allowed;
+    transform: none;
   }
 
-  /* Voci di navigazione: testo piccolo ma area di tocco piena. */
+  /* Voci di navigazione: area di tocco piena, pagina corrente sottolineata. */
   .nav-link {
     display: inline-flex;
     align-items: center;
     min-height: 44px;
     padding: 0 0.25rem;
     font-family: var(--font-display);
-    font-size: 0.8rem;
+    font-size: 1.35rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
   .nav-link:hover,
   .nav-link[aria-current="page"] {
-    color: var(--brass);
+    color: var(--red-ink);
   }
   .nav-link[aria-current="page"] {
-    box-shadow: 0 4px 0 0 var(--brass);
+    box-shadow: inset 0 -4px 0 0 var(--red-ink);
   }
 
-  /* Campi: testo a 16px in font normale, cornice netta. */
+  /* Campi: testo a 16px in font normale. */
   .field {
     width: 100%;
     min-height: 44px;
-    background: var(--background);
-    border: 3px solid var(--input);
+    background: var(--card);
+    border: 3px solid var(--ink);
     padding: 0.625rem 0.875rem;
     color: var(--foreground);
     font-size: 1rem;
@@ -308,100 +259,54 @@
     outline: none;
   }
   .field:focus {
-    border-color: var(--brass);
+    border-color: var(--pop);
+    box-shadow: 4px 4px 0 0 var(--pop);
   }
   .field:disabled {
     opacity: 0.5;
   }
 
-  /* Sigillo di seduta. */
-  .seal {
-    width: 4rem;
-    height: 4rem;
-    display: grid;
-    place-items: center;
-    font-family: var(--font-display);
-    font-size: 1.75rem;
-    color: var(--muted-foreground);
-    background: var(--background);
-    box-shadow:
-      -4px 0 0 0 var(--border),
-      4px 0 0 0 var(--border),
-      0 -4px 0 0 var(--border),
-      0 4px 0 0 var(--border);
-  }
-  .seal-on {
-    color: var(--primary-foreground);
-    background: var(--brass);
-    box-shadow:
-      -4px 0 0 0 oklch(0.52 0.1 70),
-      4px 0 0 0 oklch(0.52 0.1 70),
-      0 -4px 0 0 oklch(0.52 0.1 70),
-      0 4px 0 0 oklch(0.52 0.1 70);
-  }
-
-  /* Barre a tacche (crediti, punteggi): riempimento piatto diviso in segmenti. */
+  /* Barre: contorno blu notte, riempimento piatto. Il colore si sceglie con --fill. */
   .meter {
-    position: relative;
-    height: 12px;
-    background: var(--background);
-    border: 2px solid var(--border);
+    --fill: var(--quest-green);
+    height: 14px;
+    background: var(--card);
+    border: 3px solid var(--ink);
   }
   .meter > div {
     height: 100%;
-    background: var(--brass);
-  }
-  .meter::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: repeating-linear-gradient(
-      90deg,
-      transparent 0 calc(10% - 2px),
-      var(--background) calc(10% - 2px) 10%
-    );
+    background: var(--fill);
   }
   .meter-sm {
-    height: 8px;
+    height: 12px;
   }
 
-  /* Battute del dialogo e riquadri di testo. */
+  /* Battute del dialogo. */
   .bubble {
-    border: 3px solid var(--border);
-    background: var(--secondary);
+    border: 3px solid var(--ink);
+    background: var(--card);
     padding: 0.75rem 1rem;
     font-size: 0.95rem;
     line-height: 1.6;
   }
   .bubble-me {
-    border-color: color-mix(in oklab, var(--brass) 60%, var(--background));
-    background: color-mix(in oklab, var(--brass) 14%, var(--background));
+    background: color-mix(in oklab, var(--quest-blue) 12%, white);
   }
-  /* Riquadro di dialogo: ritratto a sinistra, battuta a destra, cornice ottone. */
+  /* Riquadro di dialogo: ritratto a sinistra, battuta a destra. */
   .dialog-box {
     display: flex;
     gap: 0.875rem;
     align-items: flex-start;
-    margin: 4px;
     padding: 0.875rem 1rem;
-    background: var(--background);
+    background: var(--card);
+    border: 3px solid var(--ink);
     font-size: 1rem;
     line-height: 1.6;
-    box-shadow:
-      -4px 0 0 0 var(--brass),
-      4px 0 0 0 var(--brass),
-      0 -4px 0 0 var(--brass),
-      0 4px 0 0 var(--brass);
+    box-shadow: 5px 5px 0 0 var(--ink);
   }
   .portrait {
-    background: var(--secondary);
-    box-shadow:
-      -3px 0 0 0 var(--border),
-      3px 0 0 0 var(--border),
-      0 -3px 0 0 var(--border),
-      0 3px 0 0 var(--border);
-    margin: 3px;
-    image-rendering: pixelated;
+    background: var(--card);
+    border: 3px solid var(--ink);
   }
   .caret {
     display: inline-block;
@@ -409,46 +314,57 @@
     height: 1em;
     margin-left: 2px;
     vertical-align: text-bottom;
-    background: var(--brass);
+    background: var(--ink);
   }
-  /* Mappa del percorso: muro a blocchi di pietra, pavimento a piastrelle. */
-  .dungeon-wall {
-    background-color: oklch(0.3 0.02 250);
-    background-image:
-      linear-gradient(oklch(0.21 0.02 250) 4px, transparent 4px),
-      linear-gradient(90deg, oklch(0.21 0.02 250) 4px, transparent 4px);
-    background-size: 32px 16px;
+
+  /* Percorso: fila di piastrelle su cui poggiano porte e studente. */
+  .quest-tiles {
+    height: 22px;
+    border-top: 3px solid var(--ink);
+    border-bottom: 3px solid var(--ink);
+    background-color: var(--mist);
+    background-image: linear-gradient(90deg, var(--ink) 3px, transparent 3px);
+    background-size: 28px 100%;
   }
-  .dungeon-floor {
-    border-top: 4px solid oklch(0.14 0.02 250);
-    background-color: oklch(0.24 0.03 165);
-    background-image:
-      linear-gradient(45deg, oklch(0 0 0 / 0.18) 25%, transparent 25% 75%, oklch(0 0 0 / 0.18) 75%),
-      linear-gradient(45deg, oklch(0 0 0 / 0.18) 25%, transparent 25% 75%, oklch(0 0 0 / 0.18) 75%);
-    background-size: 32px 32px;
-    background-position:
-      0 0,
-      16px 16px;
-  }
-  /* La porta raggiungibile è un pulsante: si solleva al passaggio e ha il fuoco visibile. */
-  .dungeon-door {
+  .quest-door {
     display: block;
     cursor: pointer;
     transition: transform 0.08s steps(2);
   }
-  .dungeon-door:hover {
+  .quest-door:hover {
     transform: translateY(-4px);
   }
 
   .chip {
-    border: 2px solid var(--destructive);
+    border: 2px solid var(--red-ink);
     padding: 0.25rem 0.625rem;
     font-size: 0.8rem;
   }
   .eyebrow {
     font-family: var(--font-display);
-    font-size: 0.7rem;
+    font-size: 1.15rem;
+    line-height: 1.2;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* Titolo: "QUEST" rosso con l'ombra blu notte sfalsata, come nel logo. */
+  .quest-logo {
+    font-family: var(--font-display);
+    line-height: 0.85;
     letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .quest-logo em {
+    display: block;
+    font-style: normal;
+    color: var(--quest-red);
+    text-shadow: 0.06em 0.06em 0 var(--ink);
+  }
+
+  /* Tratteggio rosso dello scarto tra quanto dichiarato e quanto dimostrato. */
+  .meter > div.gap-hatch {
+    background: repeating-linear-gradient(90deg, var(--quest-red) 0 4px, var(--card) 4px 7px);
   }
 }
 
