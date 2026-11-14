@@ -11,7 +11,8 @@ export type Who = ExaminerId | "presidente";
 
 const SIZE = 16;
 
-// "." = trasparente; s pelle, n naso, c abito. Le righe 6-7 e 10-11 ospitano l'espressione.
+// "." = trasparente; s pelle, n naso, c abito. Sopracciglia sulle righe 5-7, occhi sulla 8,
+// bocca sulle 10-11.
 const HEAD = [
   "................",
   "................",
@@ -40,7 +41,7 @@ interface Character {
   top?: string[];
   /** Riga della bocca (più bassa per chi porta i baffi). */
   mouthRow?: number;
-  /** Lettera di palette per le sopracciglia. */
+  /** Lettera di palette per le sopracciglia: più chiare degli occhi, che restano il tratto più scuro. */
   brow?: string;
 }
 
@@ -54,7 +55,15 @@ const rows = (...r: [number, string][]) => {
 const CAST: Record<Who, Character> = {
   // Severa: chignon scuro, occhiali, colletto bianco su abito bordeaux.
   severo: {
-    palette: { s: "#e8b796", n: "#c98f6e", h: "#2b2233", c: "#6e2436", a: "#f1ead8", g: "#d9c27a" },
+    palette: {
+      s: "#e8b796",
+      n: "#c98f6e",
+      h: "#2b2233",
+      c: "#6e2436",
+      a: "#f1ead8",
+      g: "#e0b34a",
+      r: "#5b4a68",
+    },
     layer: rows(
       row(0, "......hhhh......"),
       row(1, "......hhhh......"),
@@ -65,7 +74,8 @@ const CAST: Record<Who, Character> = {
       row(9, "..a..........a.."),
       row(14, "......a..a......"),
     ),
-    top: rows(row(7, "....g..gg..g...."), row(8, "....gggggggg....")),
+    top: rows(row(8, "....g..gg..g....")),
+    brow: "r",
   },
   // Empatico: capelli castani morbidi, barba, maglione verde.
   empatico: {
@@ -82,10 +92,20 @@ const CAST: Record<Who, Character> = {
       row(14, "......a..a......"),
       row(15, ".......aa......."),
     ),
+    brow: "h",
   },
-  // Distratto: capelli grigi arruffati, occhiali storti, papillon.
+  // Distratto: capelli grigi arruffati, occhiali di tartaruga, papillon. La montatura sta solo ai
+  // lati degli occhi: un bordo inferiore, a questa scala, sembra una maschera.
   distratto: {
-    palette: { s: "#eac4a4", n: "#cf9f7d", h: "#b9bcc2", c: "#4a4f6a", a: "#e0b34a", g: "#20242b" },
+    palette: {
+      s: "#eac4a4",
+      n: "#cf9f7d",
+      h: "#b9bcc2",
+      c: "#4a4f6a",
+      a: "#e0b34a",
+      g: "#8fd0e6",
+      r: "#8d9199",
+    },
     layer: rows(
       row(1, "...h..h.hh..h..."),
       row(2, "..hhhhhhhhhhhh.."),
@@ -96,7 +116,8 @@ const CAST: Record<Who, Character> = {
       row(14, ".....aa..aa....."),
       row(15, "......aaaa......"),
     ),
-    top: rows(row(7, "....g..........."), row(8, "....gggggggg...."), row(9, "...........g....")),
+    top: rows(row(8, "....g..gg..g....")),
+    brow: "r",
   },
   // Presidente: calvo, capelli e baffi bianchi, toga nera con collare dorato.
   presidente: {
@@ -134,17 +155,19 @@ function build(who: Who, mood: Mood): string[][] {
 
   overlay(c.layer);
 
-  for (const x of [5, 6, 9, 10]) put(x, 7, "E");
+  // Occhi una riga sotto le sopracciglia neutre: se si toccassero, a questa scala
+  // diventerebbero un unico blocco scuro.
+  for (const x of [5, 6, 9, 10]) put(x, 8, "E");
   const brow = c.brow ?? "E";
   if (mood === "stern") {
     // Sopracciglia inclinate verso il centro.
     for (const [x, y] of [
-      [4, 5],
-      [5, 6],
-      [6, 6],
-      [11, 5],
-      [10, 6],
-      [9, 6],
+      [4, 6],
+      [5, 7],
+      [6, 7],
+      [11, 6],
+      [10, 7],
+      [9, 7],
     ] as const)
       put(x, y, brow);
   } else {
