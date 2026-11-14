@@ -37,7 +37,7 @@ export function creditDelta(score: Score, conf: Confidence | "lacuna"): number {
 export function calibration(qs: QuestionRecord[]): number {
   if (!qs.length) return 0;
   const exp: Record<string, number> = { prudente: 4.5, solido: 6.5, senzarete: 8.5, lacuna: 2 };
-  const err = qs.reduce((a, q) => a + Math.abs(exp[q.confidence] - q.score.total), 0) / qs.length;
+  const err = qs.reduce((a, q) => a + Math.abs((exp[q.confidence] ?? 5) - q.score.total), 0) / qs.length;
   return Math.max(0, Math.round(100 - err * 12));
 }
 
@@ -64,4 +64,4 @@ export function weakestTopics(sessions: SessionRecord[], n = 3) {
 
 export const isProtest = (t: string) => /\b(ingiust|di nuovo|ancora questa|perche (mi|me)|gia (fatt|chiest)|non e giusto|basta|protest)/.test(norm(t));
 
-export function shuffle<T>(a: T[]): T[] { const r = [...a]; for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; } return r; }
+export function shuffle<T>(a: T[]): T[] { const r = [...a]; for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [r[i], r[j]] = [r[j] as T, r[i] as T]; } return r; }

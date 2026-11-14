@@ -5,7 +5,7 @@ import { START_CREDITS, PASS_THRESHOLD, REQUIRED_SESSIONS, scoreAnswers, creditD
 type Phase = "home" | "setup" | "hub" | "session" | "report";
 interface Live { examiner: Examiner | null; isBoss: boolean; topics: Topic[]; bossNotes: Record<string, string>; idx: number; credits: number; step: "declare" | "dialog" | "result"; conf: Confidence | "lacuna" | null; transcript: Turn[]; answers: string[]; asked: number; records: QuestionRecord[] }
 const KEY = "commissione-v1";
-const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
+const pick = <T,>(a: T[]): T => a[Math.floor(Math.random() * a.length)] as T;
 
 function customTopics(course: string, list: string): Topic[] {
   return list.split(/[\n,;]/).map((s) => s.trim()).filter(Boolean).map((t, i) => ({
@@ -148,7 +148,7 @@ function Hub({ passed, boss, last, course, onSession, onBoss, onReport, onSetup,
 function Session({ live, setLive, onEnd }: { live: Live; setLive: (l: Live) => void; onEnd: (l: Live) => void }) {
   const [input, setInput] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
-  const topic = live.topics[live.idx];
+  const topic = live.topics[live.idx]!;
   const ex = live.examiner;
   const profName = ex ? ex.name : PRESIDENT.name;
   const maxFU = live.conf && live.conf !== "lacuna" ? CONFIDENCE[live.conf].followUps : 0;
