@@ -15,6 +15,10 @@ import {
   REQUIRED_SESSIONS,
   scoreAnswers,
   keywordCoverage,
+  missedConcepts,
+  diagnose,
+  isWeak,
+  sessionReportMarkdown,
   creditDelta,
   calibration,
   finalGrade,
@@ -26,7 +30,14 @@ import {
   type Turn,
 } from "@/lib/game/engine";
 
-type Phase = "home" | "setup" | "hub" | "session" | "report";
+type Phase = "home" | "setup" | "hub" | "session" | "debrief" | "report";
+
+/** "Seduta N" contando le sole preliminari, oppure "Commissione Plenaria". */
+function sessionTitle(sessions: SessionRecord[], s: SessionRecord): string {
+  if (s.examiner === "presidente") return "Commissione Plenaria";
+  const n = sessions.filter((x) => x.examiner !== "presidente").findIndex((x) => x.id === s.id);
+  return `Seduta ${n + 1}`;
+}
 interface Live {
   examiner: Examiner | null;
   isBoss: boolean;
@@ -120,6 +131,8 @@ export default function Game() {
   const prelim = sessions.filter((s) => s.examiner !== "presidente");
   const passed = prelim.filter((s) => s.passed);
   const boss = sessions.find((s) => s.examiner === "presidente" && s.passed);
+  const [debriefId, setDebriefId] = useState<string | null>(null);
+  const debrief = sessions.find((s) => s.id === debriefId);
 
   function startSession(isBoss: boolean) {
     let topics: Topic[];
@@ -163,11 +176,13 @@ export default function Game() {
       credits: l.credits,
       passed: l.credits >= PASS_THRESHOLD,
       questions: l.records,
+      date: new Date().toISOString(),
     };
     setSessions((s) => [...s, rec]);
     setLastOutcome(rec);
     setLive(null);
-    setPhase(l.isBoss && rec.passed ? "report" : "hub");
+    setDebriefId(rec.id);
+    setPhase("debrief");
   }
 
   /** Uscire da una seduta in corso la annulla: lo si chiede prima. */
@@ -238,7 +253,30 @@ export default function Game() {
         {phase === "session" && live && (
           <Session live={live} setLive={setLive} onEnd={endSession} />
         )}
-        {phase === "report" && <Report sessions={sessions} onBack={() => setPhase("hub")} />}
+        {phase === "debrief" && debrief && (
+          <Debrief
+            session={debrief}
+            title={sessionTitle(sessions, debrief)}
+            onNext={() =>
+              setPhase(debrief.examiner === "presidente" && debrief.passed ? "report" : "hub")
+            }
+            nextLabel={
+              debrief.examiner === "presidente" && debrief.passed
+                ? "Leggi il verbale finale"
+                : "Torna al percorso"
+            }
+          />
+        )}
+        {phase === "report" && (
+          <Report
+            sessions={sessions}
+            onBack={() => setPhase("hub")}
+            onDebrief={(id) => {
+              setDebriefId(id);
+              setPhase("debrief");
+            }}
+          />
+        )}
       </main>
     </div>
   );
@@ -590,6 +628,7 @@ function Session({
       model: topic.model,
       examiner: profName,
       coverage: keywordCoverage(answers, topic),
+      missed: missedConcepts(answers, topic),
     };
     setLive({
       ...live,
@@ -802,7 +841,134 @@ function Coverage({ q }: { q: QuestionRecord }) {
   );
 }
 
-function Report({ sessions, onBack }: { sessions: SessionRecord[]; onBack: () => void }) {
+function download(name: string, text: string) {
+  const url = URL.createObjectURL(new Blob([text], { type: "text/markdown;charset=utf-8" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/** Referto di fine seduta: punti carenti ricavati dalle risposte date, scaricabile. */
+function Debrief({
+  session: s,
+  title,
+  onNext,
+  nextLabel,
+}: {
+  session: SessionRecord;
+  title: string;
+  onNext: () => void;
+  nextLabel: string;
+}) {
+  const weak = s.questions.filter(isWeak);
+  const strong = s.questions.filter((q) => !isWeak(q));
+  const date = new Date(s.date ?? Date.now());
+  const save = () =>
+    download(
+      `referto-${title.toLowerCase().replace(/\s+/g, "-")}-${date.toISOString().slice(0, 10)}.md`,
+      sessionReportMarkdown(s, title, date.toLocaleDateString("it-IT")),
+    );
+  return (
+    <section>
+      <div className="text-xs uppercase tracking-[0.3em] text-brass">Referto di seduta</div>
+      <h2 className="mt-2 font-display text-4xl">
+        {title} · {s.examinerName}
+      </h2>
+      <div className="mt-6 grid gap-4 md:grid-cols-3">
+        <Stat label="Esito" value={s.passed ? "Convalidata" : "Non convalidata"} big />
+        <Stat label="Crediti Fiducia" value={`${s.credits} / ${PASS_THRESHOLD}`} />
+        <Stat label="Calibrazione sicurezza" value={`${calibration(s.questions)}%`} />
+      </div>
+
+      <h3 className="mt-10 font-display text-3xl">Punti carenti</h3>
+      {weak.length === 0 && (
+        <p className="mt-3 text-muted-foreground">
+          Nessun punto carente rilevato in questa seduta.
+        </p>
+      )}
+      <div className="mt-4 space-y-4">
+        {weak.map((q, i) => (
+          <div key={i} className="panel border-l-4 border-l-destructive p-5">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <div className="font-display text-2xl">{q.topicTitle}</div>
+              <div className="text-sm text-muted-foreground">
+                {q.confidence === "lacuna" ? "Lacuna riconosciuta" : CONFIDENCE[q.confidence].label}{" "}
+                · {q.score.total}/10
+              </div>
+            </div>
+            <ul className="mt-3 list-disc space-y-1 pl-5 text-sm">
+              {diagnose(q).map((d) => (
+                <li key={d}>{d}</li>
+              ))}
+            </ul>
+            {q.missed && q.missed.length > 0 && (
+              <div className="mt-4">
+                <div className="text-xs uppercase tracking-widest text-muted-foreground">
+                  Concetti che non ha toccato
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {q.missed.map((m) => (
+                    <span
+                      key={m}
+                      className="rounded-full border border-destructive/50 px-3 py-1 text-xs"
+                    >
+                      {m}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="mt-4 rounded-md bg-secondary p-4 text-sm">
+              <div className="text-xs uppercase tracking-widest text-brass">
+                Cosa avrebbe dovuto dire
+              </div>
+              <p className="mt-1 leading-relaxed">{q.model}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {strong.length > 0 && (
+        <>
+          <h3 className="mt-10 font-display text-3xl">Argomenti solidi</h3>
+          <ul className="mt-3 space-y-1 text-sm">
+            {strong.map((q, i) => (
+              <li key={i}>
+                <b>{q.topicTitle}</b>{" "}
+                <span className="text-muted-foreground">· {q.score.total}/10</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      <p className="mt-8 text-xs text-muted-foreground">
+        Analisi automatica basata sui concetti chiave del programma presenti nelle sue risposte:
+        indica cosa ripassare, non sostituisce il giudizio di un docente.
+      </p>
+      <div className="mt-6 flex flex-wrap gap-3">
+        <button className="btn-brass" onClick={save}>
+          Scarica il referto
+        </button>
+        <button className="btn-ghost" onClick={onNext}>
+          {nextLabel}
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function Report({
+  sessions,
+  onBack,
+  onDebrief,
+}: {
+  sessions: SessionRecord[];
+  onBack: () => void;
+  onDebrief: (id: string) => void;
+}) {
   const qs = sessions.flatMap((s) => s.questions);
   const { grade, avg } = finalGrade(sessions);
   const cal = calibration(qs);
@@ -813,7 +979,6 @@ function Report({ sessions, onBack }: { sessions: SessionRecord[]; onBack: () =>
     const l = lastTry.get(q.topicId)!;
     return l.confidence === "lacuna" || l.score.total < 6;
   });
-  let prelimNo = 0;
   const final = sessions.some((s) => s.examiner === "presidente" && s.passed);
   const [open, setOpen] = useState<string | null>(null);
   return (
@@ -859,11 +1024,16 @@ function Report({ sessions, onBack }: { sessions: SessionRecord[]; onBack: () =>
         {sessions.map((s) => (
           <li key={s.id}>
             <div className="font-display text-xl">
-              {s.examiner === "presidente" ? "Commissione Plenaria" : `Seduta ${++prelimNo}`} ·{" "}
-              {s.examinerName}{" "}
+              {sessionTitle(sessions, s)} · {s.examinerName}{" "}
               <span className={`text-sm ${s.passed ? "text-brass" : "text-destructive"}`}>
                 ({s.passed ? "convalidata" : "non convalidata"}, {s.credits} crediti)
-              </span>
+              </span>{" "}
+              <button
+                className="font-sans text-xs uppercase tracking-[0.2em] text-muted-foreground underline hover:text-brass"
+                onClick={() => onDebrief(s.id)}
+              >
+                Referto
+              </button>
             </div>
             <div className="mt-2 space-y-2">
               {s.questions.map((q, qi) => {

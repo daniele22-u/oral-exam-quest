@@ -2,6 +2,9 @@ import { describe, it, expect } from "vitest";
 import {
   calibration,
   creditDelta,
+  diagnose,
+  missedConcepts,
+  sessionReportMarkdown,
   finalGrade,
   keywordCoverage,
   scoreAnswers,
@@ -98,5 +101,46 @@ describe("regole", () => {
     expect(finalGrade(sess(0, "senzarete")).grade).toBe("18/30");
     expect(finalGrade(sess(10, "senzarete")).grade).toBe("30 e lode");
     expect(finalGrade([]).grade).toBe("18/30");
+  });
+  it("le sigle corte non si trovano dentro altre parole", () => {
+    const eeg = TOPICS.find((t) => t.id === "ne-eeg")!;
+    // "tipica" e "tecnica" contengono "ica" ma non parlano di ICA.
+    expect(missedConcepts(["La tecnica tipica."], eeg)).toContain("ICA");
+    expect(missedConcepts(["Uso la ICA."], eeg)).not.toContain("ICA");
+    const fft = TOPICS.find((t) => t.id === "sp-fft")!;
+    expect(missedConcepts(["Costa N log N invece di n^2."], fft)).not.toEqual(
+      expect.arrayContaining(["costo O(N log N)", "costo O(N²)"]),
+    );
+  });
+  it("il referto elenca i punti carenti ricavati dalle risposte", () => {
+    const bad = {
+      ...q("a", 2, "senzarete"),
+      topicTitle: "Filtri",
+      model: "Modello.",
+      missed: ["stabilità"],
+    };
+    const gap = { ...q("b", 0, "lacuna"), topicTitle: "Zeta" };
+    const good = { ...q("c", 9, "solido"), topicTitle: "FFT" };
+    expect(diagnose(bad).join(" ")).toMatch(/Sicurezza sopravvalutata/);
+    expect(diagnose(good)).toEqual([]);
+    expect(diagnose({ ...q("d", 9, "prudente") }).join(" ")).toMatch(/sottovalutata/);
+    const md = sessionReportMarkdown(
+      {
+        id: "1",
+        examiner: "severo",
+        examinerName: "Prof. X",
+        credits: 12,
+        passed: false,
+        questions: [bad, gap, good],
+      },
+      "Seduta 1",
+      "14/11/2026",
+    );
+    const weak = md.slice(md.indexOf("## Punti carenti"), md.indexOf("## Dettaglio"));
+    expect(weak).toContain("### Filtri");
+    expect(weak).toContain("Concetti non toccati: stabilità.");
+    expect(weak).toContain("### Zeta");
+    expect(weak).not.toContain("### FFT");
+    expect(md).toContain("non convalidata con 12 crediti");
   });
 });

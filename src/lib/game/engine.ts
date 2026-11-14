@@ -1,4 +1,4 @@
-import { CONFIDENCE, type Confidence, type ExaminerId, type Topic } from "./data";
+import { CONCEPT_LABELS, CONFIDENCE, type Confidence, type ExaminerId, type Topic } from "./data";
 
 export const START_CREDITS = 30;
 export const PASS_THRESHOLD = 40; // crediti per convalidare una seduta
@@ -26,6 +26,8 @@ export interface QuestionRecord {
   examiner: string;
   /** Concetti chiave del programma toccati nella risposta (assente nei fascicoli salvati da versioni precedenti). */
   coverage?: Coverage;
+  /** Concetti chiave non toccati, con nome leggibile (assente nei fascicoli precedenti). */
+  missed?: string[];
 }
 export interface Coverage {
   hit: number;
@@ -38,6 +40,8 @@ export interface SessionRecord {
   credits: number;
   passed: boolean;
   questions: QuestionRecord[];
+  /** Data di chiusura in formato ISO (assente nei fascicoli precedenti). */
+  date?: string;
 }
 
 const norm = (s: string) =>
@@ -47,23 +51,35 @@ const norm = (s: string) =>
     .replace(/[\u0300-\u036f]/g, "");
 
 /**
- * Le parole chiave sono radici ("campion", "stabil") cercate come sottostringa; quelle di 1-2
- * caratteri ("m", "h", "z") devono invece comparire come parola a sé, altrimenti qualsiasi
- * testo le conterrebbe.
+ * Le parole chiave sono radici ("campion", "stabil") cercate come sottostringa; simboli e sigle
+ * fino a 3 caratteri ("m", "z", "ica", "fir", "log") devono invece comparire come parola a sé,
+ * altrimenti le conterrebbe quasi ogni testo ("tipica", "firma", "logica").
  */
-function keywordHits(text: string, keywords: string[]): number {
+function splitKeywords(text: string, keywords: string[]) {
   const tokens = new Set(text.split(/[^a-z0-9]+/).filter(Boolean));
-  return keywords.filter((k) => {
+  const hit: string[] = [];
+  const missed: string[] = [];
+  for (const k of keywords) {
     const n = norm(k);
-    return n.length <= 2 ? tokens.has(n) : text.includes(n);
-  }).length;
+    const found = /^[a-z0-9]{1,3}$/.test(n) ? tokens.has(n) : text.includes(n);
+    (found ? hit : missed).push(k);
+  }
+  return { hit, missed };
 }
+const keywordHits = (text: string, keywords: string[]) => splitKeywords(text, keywords).hit.length;
 
 export function keywordCoverage(answers: string[], topic: Topic): Coverage {
   return {
     hit: keywordHits(norm(answers.join(" ")), topic.keywords),
     total: topic.keywords.length,
   };
+}
+
+/** Concetti chiave dell'argomento che le risposte non hanno toccato, con nome leggibile. */
+export function missedConcepts(answers: string[], topic: Topic): string[] {
+  return splitKeywords(norm(answers.join(" ")), topic.keywords).missed.map(
+    (k) => CONCEPT_LABELS[k] ?? k,
+  );
 }
 
 /** Valutazione demo deterministica: parole chiave, lunghezza, connettivi logici. */
@@ -137,4 +153,82 @@ export function shuffle<T>(a: T[]): T[] {
     [r[i], r[j]] = [r[j] as T, r[i] as T];
   }
   return r;
+}
+
+export const SUFFICIENT = 6;
+
+/** Punti carenti di una singola domanda, ricavati dalle risposte date dallo studente. */
+export function diagnose(q: QuestionRecord): string[] {
+  if (q.confidence === "lacuna")
+    return ["Argomento non sostenuto: lacuna dichiarata, da studiare da capo."];
+  const out: string[] = [];
+  const { accuracy, completeness, logic, total } = q.score;
+  if (accuracy < SUFFICIENT)
+    out.push(
+      `Accuratezza ${accuracy}/10: nelle risposte mancano concetti centrali dell'argomento.`,
+    );
+  if (completeness < SUFFICIENT)
+    out.push(
+      `Completezza ${completeness}/10: risposte troppo brevi. Sviluppi definizione, meccanismo ed esempio.`,
+    );
+  if (logic < SUFFICIENT)
+    out.push(
+      `Tenuta logica ${logic}/10: i passaggi non sono collegati. Espliciti cause e conseguenze (perché, quindi, infatti).`,
+    );
+  const label = CONFIDENCE[q.confidence].label;
+  if (q.confidence !== "prudente" && total < SUFFICIENT)
+    out.push(`Sicurezza sopravvalutata: ha dichiarato "${label}" ma la resa è stata ${total}/10.`);
+  if (q.confidence === "prudente" && total >= 8)
+    out.push(
+      `Sicurezza sottovalutata: ha dichiarato "${label}" con una resa di ${total}/10. Poteva esporsi di più.`,
+    );
+  return out;
+}
+
+/** Una domanda è carente se insufficiente, dichiarata come lacuna o con qualcosa da segnalare. */
+export const isWeak = (q: QuestionRecord) =>
+  q.confidence === "lacuna" || q.score.total < SUFFICIENT || diagnose(q).length > 0;
+
+/** Referto di seduta in Markdown, scaricabile. */
+export function sessionReportMarkdown(s: SessionRecord, title: string, date: string): string {
+  const L: string[] = [];
+  const course = s.questions[0]?.course;
+  L.push(`# Referto di seduta: ${title}`, "");
+  L.push(`- Data: ${date}`);
+  if (course) L.push(`- Corso: ${course}`);
+  L.push(`- Esaminatore: ${s.examinerName}`);
+  L.push(
+    `- Esito: ${s.passed ? "convalidata" : "non convalidata"} con ${s.credits} crediti (soglia ${PASS_THRESHOLD})`,
+  );
+  L.push(`- Calibrazione della sicurezza: ${calibration(s.questions)}%`, "");
+
+  const weak = s.questions.filter(isWeak);
+  L.push("## Punti carenti", "");
+  if (!weak.length) L.push("Nessun punto carente rilevato in questa seduta.", "");
+  for (const q of weak) {
+    L.push(`### ${q.topicTitle} (${q.score.total}/10)`, "");
+    for (const d of diagnose(q)) L.push(`- ${d}`);
+    if (q.missed?.length) L.push(`- Concetti non toccati: ${q.missed.join(", ")}.`);
+    L.push("", `**Cosa avrebbe dovuto dire.** ${q.model}`, "");
+  }
+
+  L.push("## Dettaglio delle domande", "");
+  for (const q of s.questions) {
+    const conf = q.confidence === "lacuna" ? "Lacuna riconosciuta" : CONFIDENCE[q.confidence].label;
+    L.push(`### ${q.topicTitle}`, "");
+    L.push(
+      `Sicurezza dichiarata: ${conf}. Punteggio ${q.score.total}/10 (accuratezza ${q.score.accuracy}, completezza ${q.score.completeness}, tenuta logica ${q.score.logic}). Crediti ${q.delta >= 0 ? "+" : ""}${q.delta}.`,
+      "",
+    );
+    for (const t of q.transcript)
+      L.push(`> **${t.role === "prof" ? q.examiner : "Studente"}:** ${t.text}`, ">");
+    L.pop();
+    L.push("");
+  }
+  L.push(
+    "---",
+    "Analisi automatica basata sui concetti chiave del programma presenti nelle risposte: indica cosa ripassare, non sostituisce il giudizio di un docente.",
+    "",
+  );
+  return L.join("\n");
 }
