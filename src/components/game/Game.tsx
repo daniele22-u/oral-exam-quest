@@ -37,8 +37,14 @@ import { QuestMap } from "./QuestMap";
 import { Mic } from "./Mic";
 import { useSpeaker } from "./useSpeaker";
 import { Coins, GapBars, Heart, Pulse } from "./Vitals";
+import { lessonsFor } from "@/lib/game/materials";
+import { Icon } from "./Art";
+import { Materials } from "./Materials";
+import { Onboarding, type CourseOption, type Profile } from "./Onboarding";
+import { ProfileSheet, TabBar, TopBar, type Tab } from "./Shell";
+import { Student } from "./QuestMap";
 
-type Phase = "home" | "setup" | "hub" | "session" | "debrief" | "report";
+type Phase = "onboarding" | "hub" | "materials" | "session" | "debrief" | "report";
 
 /** "Seduta N" contando le sole preliminari, oppure "Commissione Plenaria". */
 function sessionTitle(sessions: SessionRecord[], s: SessionRecord): string {
@@ -90,7 +96,7 @@ function customTopics(course: string, list: string): Topic[] {
 }
 
 export default function Game() {
-  const [phase, setPhase] = useState<Phase>("home");
+  const [phase, setPhase] = useState<Phase>("onboarding");
   const [course, setCourse] = useState<string>(COURSES[0]);
   const [custom, setCustom] = useState({ name: "", topics: "" });
   const [sessions, setSessions] = useState<SessionRecord[]>([]);
@@ -99,6 +105,9 @@ export default function Game() {
 
   // Variante vocale (l'esaminatore parla, lo studente risponde al microfono): richiede l'AI.
   const [voicePref, setVoicePref] = useState(false);
+  // Configurazione iniziale: servizi collegati (per finta) e se è già stata conclusa.
+  const [profile, setProfile] = useState<Profile>({ polimi: false, webeep: false, done: false });
+  const [sheet, setSheet] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -111,11 +120,17 @@ export default function Game() {
         if (s.custom)
           setCustom({ name: String(s.custom.name ?? ""), topics: String(s.custom.topics ?? "") });
         setVoicePref(s.voice === true);
+        const done = s.profile?.done === true || saved.length > 0 || !!s.live;
+        setProfile({
+          polimi: s.profile?.polimi === true,
+          webeep: s.profile?.webeep === true,
+          done,
+        });
         // Una seduta interrotta (ricarica, chiusura della scheda) riprende da dove era rimasta.
         if (s.live?.topics?.[s.live.idx] && Array.isArray(s.live.records)) {
           setLive(s.live);
           setPhase("session");
-        } else if (saved.length) setPhase("hub");
+        } else if (done) setPhase("hub");
       }
     } catch {
       /* fascicolo illeggibile: si riparte da zero */
@@ -128,12 +143,12 @@ export default function Game() {
     try {
       localStorage.setItem(
         KEY,
-        JSON.stringify({ sessions, course, custom, live, voice: voicePref }),
+        JSON.stringify({ sessions, course, custom, live, voice: voicePref, profile }),
       );
     } catch {
       /* storage pieno o negato */
     }
-  }, [hydrated, sessions, course, custom, live, voicePref]);
+  }, [hydrated, sessions, course, custom, live, voicePref, profile]);
 
   const pool = useMemo(
     () =>
@@ -142,6 +157,16 @@ export default function Game() {
         : TOPICS.filter((t) => t.course === course),
     [course, custom],
   );
+  const courses: CourseOption[] = useMemo(
+    () =>
+      COURSES.map((c) => ({
+        id: c,
+        title: c,
+        lessons: lessonsFor(TOPICS.filter((t) => t.course === c)),
+      })),
+    [],
+  );
+  const courseTitle = course === "custom" ? custom.name || "Materia a mano" : course;
   const prelim = sessions.filter((s) => s.examiner !== "presidente");
   const passed = prelim.filter((s) => s.passed);
   const boss = sessions.find((s) => s.examiner === "presidente" && s.passed);
@@ -155,6 +180,10 @@ export default function Game() {
       .catch(() => setAi(false));
   }, []);
   const debrief = sessions.find((s) => s.id === debriefId);
+  // Cambiare schermata riporta in alto, come aprire una pagina nuova.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [phase]);
 
   function startSession(isBoss: boolean) {
     let topics: Topic[];
@@ -216,272 +245,126 @@ export default function Game() {
     setPhase(target);
   }
 
-  return (
-    <div className="min-h-screen academy-bg text-foreground">
-      <header className="border-b-4 border-border bg-card">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-6 px-6 py-2">
-          <button
-            onClick={() => leaveTo("home")}
-            className="flex min-h-11 items-center gap-2 font-display text-3xl uppercase leading-none tracking-wide"
-            aria-label="Oral Exam Quest, pagina iniziale"
-          >
-            <Heart size={22} />
-            <span>
-              Oral Exam <span className="text-quest-red">Quest</span>
-            </span>
-          </button>
-          <nav className="flex flex-wrap items-center justify-end gap-x-5 text-muted-foreground">
-            <span
-              className={`eyebrow ${ai ? "text-pop" : ""}`}
-              title={
-                ai
-                  ? "Domande e valutazione generate da un modello AI"
-                  : "Domande predefinite e valutazione a parole chiave"
-              }
-            >
-              {ai ? "Esaminatore AI" : "Modalità demo"}
-            </span>
-            {ai && (
-              <div role="group" aria-label="Modalità d'esame" className="flex">
-                {(
-                  [
-                    [false, "Testo"],
-                    [true, "Voce"],
-                  ] as const
-                ).map(([v, label]) => (
-                  <button
-                    key={label}
-                    className={`mode-tab ${voicePref === v ? "mode-tab-on" : ""}`}
-                    aria-pressed={voicePref === v}
-                    onClick={() => setVoicePref(v)}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            )}
-            <span className="eyebrow">
-              Sedute {Math.min(passed.length, REQUIRED_SESSIONS)}/{REQUIRED_SESSIONS}
-            </span>
-            <button
-              className="nav-link"
-              aria-current={phase === "home" ? "page" : undefined}
-              onClick={() => leaveTo("home")}
-            >
-              Home
-            </button>
-            {sessions.length > 0 && (
-              <>
-                <button
-                  className="nav-link"
-                  aria-current={phase === "hub" ? "page" : undefined}
-                  onClick={() => leaveTo("hub")}
-                >
-                  Percorso
-                </button>
-                <button
-                  className="nav-link"
-                  aria-current={phase === "report" ? "page" : undefined}
-                  onClick={() => leaveTo("report")}
-                >
-                  Fascicolo
-                </button>
-              </>
-            )}
-          </nav>
-        </div>
-      </header>
-      <main className="mx-auto max-w-5xl px-6 py-10">
-        {phase === "home" && (
-          <Home
-            resume={sessions.length > 0}
-            onStart={() => setPhase(sessions.length ? "hub" : "setup")}
-          />
-        )}
-        {phase === "setup" && (
-          <Setup
-            course={course}
-            setCourse={setCourse}
-            custom={custom}
-            setCustom={setCustom}
-            count={pool.length}
-            onGo={() => setPhase("hub")}
-          />
-        )}
-        {phase === "hub" && (
-          <Hub
-            passed={passed.length}
-            boss={!!boss}
-            last={lastOutcome}
-            course={course === "custom" ? custom.name || "Materia personalizzata" : course}
-            onSession={() => startSession(false)}
-            onBoss={() => startSession(true)}
-            onReport={() => setPhase("report")}
-            onSetup={() => setPhase("setup")}
-            onReset={() => {
-              if (confirm("Cancellare il fascicolo e ricominciare?")) {
-                setSessions([]);
-                setLastOutcome(null);
-                setPhase("home");
-              }
-            }}
-          />
-        )}
-        {phase === "session" && live && (
-          <Session live={live} setLive={setLive} onEnd={endSession} ai={ai} voice={voice} />
-        )}
-        {phase === "debrief" && debrief && (
-          <Debrief
-            session={debrief}
-            title={sessionTitle(sessions, debrief)}
-            onNext={() =>
-              setPhase(debrief.examiner === "presidente" && debrief.passed ? "report" : "hub")
-            }
-            nextLabel={
-              debrief.examiner === "presidente" && debrief.passed
-                ? "Leggi il verbale finale"
-                : "Torna al percorso"
-            }
-          />
-        )}
-        {phase === "report" && (
-          <Report
-            sessions={sessions}
-            onBack={() => setPhase("hub")}
-            onDebrief={(id) => {
-              setDebriefId(id);
-              setPhase("debrief");
-            }}
-          />
-        )}
-      </main>
-    </div>
-  );
-}
+  if (!hydrated) return <div className="min-h-dvh academy-bg" />;
 
-function Home({ onStart, resume }: { onStart: () => void; resume: boolean }) {
-  return (
-    <section className="py-12 text-center">
-      <p className="eyebrow text-pop">Simulatore d'esame orale</p>
-      <h1 className="quest-logo mt-4 text-7xl md:text-9xl">
-        Oral Exam
-        <em>Quest</em>
-      </h1>
-      <p className="mt-8 font-display text-3xl leading-none md:text-4xl">
-        Non basta sapere. <span className="text-destructive">Devi sapere quanto sai.</span>
-      </p>
-      <p className="mx-auto mt-8 max-w-2xl text-lg text-muted-foreground">
-        Supera tre sedute preliminari con esaminatori estratti a sorte, dichiara la tua sicurezza
-        prima di ogni risposta e affronta infine il Presidente di Commissione, che conosce ogni tuo
-        tentennamento.
-      </p>
-      <div className="mx-auto mt-12 grid max-w-3xl gap-4 text-left md:grid-cols-3">
-        {[
-          [
-            "I",
-            "Dichiara",
-            "Prudente, Solido o Senza Rete: più ti esponi, più crediti, più domande incalzanti.",
-          ],
-          [
-            "II",
-            "Sostieni",
-            "2–4 domande di approfondimento per ogni argomento, valutate su accuratezza, completezza e logica.",
-          ],
-          [
-            "III",
-            "Riscattati",
-            "Il Presidente ripropone esattamente le tue lacune. Poi, il verbale.",
-          ],
-        ].map(([n, t, d]) => (
-          <div key={n} className="panel p-5">
-            <div className="font-display text-4xl leading-none text-pop">{n}</div>
-            <div className="mt-2 font-semibold">{t}</div>
-            <p className="mt-1 text-sm text-muted-foreground">{d}</p>
-          </div>
-        ))}
+  if (phase === "onboarding")
+    return (
+      <div className="academy-bg text-foreground">
+        <Onboarding
+          courses={courses}
+          course={course === "custom" ? COURSES[0] : course}
+          setCourse={setCourse}
+          profile={profile}
+          setProfile={setProfile}
+          onDone={() => {
+            setProfile((p) => ({ ...p, done: true }));
+            setPhase("hub");
+          }}
+        />
       </div>
-      <button onClick={onStart} className="btn-main mt-12">
-        {resume ? "Riprendi il percorso" : "Entra in aula"}
-      </button>
-    </section>
-  );
-}
+    );
 
-interface Custom {
-  name: string;
-  topics: string;
-}
-function Setup({
-  course,
-  setCourse,
-  custom,
-  setCustom,
-  count,
-  onGo,
-}: {
-  course: string;
-  setCourse: (c: string) => void;
-  custom: Custom;
-  setCustom: (c: Custom) => void;
-  count: number;
-  onGo: () => void;
-}) {
-  const ok = count >= 3;
-  return (
-    <section className="mx-auto max-w-2xl">
-      <h2 className="font-display text-4xl leading-none">Programma d'esame</h2>
-      <p className="mt-2 text-muted-foreground">
-        Gli argomenti di ogni seduta vengono estratti a sorte da questo programma.
-      </p>
-      <div className="mt-8 grid gap-3">
-        {[...COURSES, "custom"].map((c) => (
-          <button
-            key={c}
-            onClick={() => setCourse(c)}
-            className={`panel p-4 text-left transition ${course === c ? "panel-on" : ""}`}
-          >
-            <div className="font-display text-2xl leading-none">
-              {c === "custom" ? "Materia personalizzata" : c}
-            </div>
-            <div className="text-sm text-muted-foreground">
-              {c === "custom"
-                ? "Inserisci il nome del corso e almeno 3 argomenti."
-                : TOPICS.filter((t) => t.course === c)
-                    .map((t) => t.title)
-                    .join(" · ")}
-            </div>
-          </button>
-        ))}
+  // Durante la seduta spariscono schede e profilo: resta solo l'esame.
+  if (phase === "session" && live)
+    return (
+      <div className="min-h-dvh academy-bg text-foreground">
+        <Session
+          live={live}
+          setLive={setLive}
+          onEnd={endSession}
+          onQuit={() => leaveTo("hub")}
+          ai={ai}
+          voice={voice}
+        />
       </div>
-      {course === "custom" && (
-        <div className="mt-4 grid gap-3">
-          <input
-            className="field"
-            placeholder="Nome del corso"
-            value={custom.name}
-            onChange={(e) => setCustom({ ...custom, name: e.target.value })}
-          />
-          <textarea
-            className="field min-h-28"
-            placeholder="Argomenti, uno per riga"
-            value={custom.topics}
-            onChange={(e) => setCustom({ ...custom, topics: e.target.value })}
-          />
-          <div className={`text-xs ${ok ? "text-muted-foreground" : "text-destructive"}`}>
-            {count} {count === 1 ? "argomento riconosciuto" : "argomenti riconosciuti"}
-            {ok ? "" : " · ne servono almeno 3"}
-          </div>
-        </div>
+    );
+
+  const tab: Tab | null =
+    phase === "hub" || phase === "materials" || phase === "report" ? phase : null;
+  return (
+    <div className="min-h-dvh academy-bg text-foreground">
+      <TopBar
+        passed={Math.min(passed.length, REQUIRED_SESSIONS)}
+        required={REQUIRED_SESSIONS}
+        onProfile={() => setSheet(true)}
+      />
+      <div className="mx-auto max-w-6xl md:grid md:grid-cols-[200px_minmax(0,1fr)] md:gap-8 md:px-6">
+        <TabBar current={tab} onSelect={(t) => setPhase(t)} />
+        <main className="px-4 pb-28 pt-6 md:px-0 md:pb-12 md:pt-8">
+          {phase === "hub" && (
+            <Hub
+              passed={passed.length}
+              boss={!!boss}
+              last={lastOutcome}
+              course={courseTitle}
+              first={sessions.length === 0}
+              ready={pool.length >= 3}
+              onSession={() => startSession(false)}
+              onBoss={() => startSession(true)}
+              onReport={() => setPhase("report")}
+              onMaterials={() => setPhase("materials")}
+            />
+          )}
+          {phase === "materials" && (
+            <Materials
+              courses={courses}
+              course={course}
+              setCourse={setCourse}
+              custom={custom}
+              setCustom={setCustom}
+              customCount={course === "custom" ? pool.length : 0}
+              questions={sessions.flatMap((x) => x.questions)}
+              linked={profile.webeep}
+            />
+          )}
+          {phase === "debrief" && debrief && (
+            <Debrief
+              session={debrief}
+              title={sessionTitle(sessions, debrief)}
+              onNext={() =>
+                setPhase(debrief.examiner === "presidente" && debrief.passed ? "report" : "hub")
+              }
+              nextLabel={
+                debrief.examiner === "presidente" && debrief.passed
+                  ? "Leggi il verbale finale"
+                  : "Torna al percorso"
+              }
+            />
+          )}
+          {phase === "report" && (
+            <Report
+              sessions={sessions}
+              onDebrief={(id) => {
+                setDebriefId(id);
+                setPhase("debrief");
+              }}
+            />
+          )}
+        </main>
+      </div>
+      {sheet && (
+        <ProfileSheet
+          onClose={() => setSheet(false)}
+          profile={profile}
+          ai={ai}
+          voice={voicePref}
+          setVoice={setVoicePref}
+          course={courseTitle}
+          onConnect={() => {
+            setSheet(false);
+            setPhase("onboarding");
+          }}
+          onReset={() => {
+            if (confirm("Cancellare il fascicolo e ricominciare?")) {
+              setSessions([]);
+              setLastOutcome(null);
+              setSheet(false);
+              setPhase("hub");
+            }
+          }}
+        />
       )}
-      <div className="panel mt-6 p-4 text-sm text-muted-foreground">
-        Regole: ogni seduta parte da <b className="text-pop">{START_CREDITS} Crediti Fiducia</b> e
-        si convalida con almeno <b className="text-pop">{PASS_THRESHOLD}</b>. Servono{" "}
-        {REQUIRED_SESSIONS} sedute convalidate per accedere alla Commissione Plenaria.
-      </div>
-      <button disabled={!ok} onClick={onGo} className="btn-main mt-8 disabled:opacity-40">
-        Conferma programma
-      </button>
-    </section>
+    </div>
   );
 }
 
@@ -490,50 +373,112 @@ function Hub({
   boss,
   last,
   course,
+  first,
+  ready,
   onSession,
   onBoss,
   onReport,
-  onSetup,
-  onReset,
+  onMaterials,
 }: {
   passed: number;
   boss: boolean;
   last: SessionRecord | null;
   course: string;
+  /** Nessuna seduta ancora sostenuta: si mostra come funziona. */
+  first: boolean;
+  /** Il programma ha abbastanza argomenti per estrarre una seduta. */
+  ready: boolean;
   onSession: () => void;
   onBoss: () => void;
   onReport: () => void;
-  onSetup: () => void;
-  onReset: () => void;
+  onMaterials: () => void;
 }) {
   const unlocked = passed >= REQUIRED_SESSIONS;
+  const numerals = ["I", "II", "III", "IV", "V"];
+  const next = boss
+    ? {
+        title: "Esame superato",
+        text: "Il verbale finale è nel fascicolo.",
+        cta: "Leggi il verbale",
+        go: onReport,
+      }
+    : unlocked
+      ? {
+          title: "Commissione Plenaria",
+          text: "Il Presidente ripropone i tuoi punti deboli. Nessun rinvio: si risponde a tutto.",
+          cta: "Presentati al Presidente",
+          go: onBoss,
+        }
+      : {
+          title: `Seduta ${numerals[passed] ?? passed + 1}`,
+          text: "Un esaminatore estratto a sorte e tre argomenti dal tuo programma.",
+          cta: first ? "Inizia la prima seduta" : "Inizia la seduta",
+          go: onSession,
+        };
   return (
-    <section>
+    <section className="anim-slide">
       {last && (
         <div
-          className={`panel mb-8 border-l-4 p-5 ${last.passed ? "border-l-quest-green" : "border-l-destructive"}`}
+          role="status"
+          className={`panel mb-6 flex items-center gap-3 border-l-4 p-4 ${last.passed ? "border-l-quest-green" : "border-l-destructive"}`}
         >
-          <div className="eyebrow text-muted-foreground">
-            Esito ultima seduta · {last.examinerName}
+          {last.passed && <Icon name="check" size={32} />}
+          <div>
+            <div className="font-display text-2xl leading-none">
+              {last.passed ? "Seduta convalidata" : "Seduta non convalidata"} · {last.credits}{" "}
+              crediti
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {last.examinerName}
+              {last.passed ? "" : " · gli argomenti critici restano nel fascicolo, puoi riprovare"}
+            </div>
           </div>
-          <div className="mt-1 font-display text-2xl leading-none">
-            {last.passed ? "Seduta convalidata" : "Seduta non convalidata"} — {last.credits} crediti
-          </div>
-          {!last.passed && (
-            <p className="text-sm text-muted-foreground">
-              Gli argomenti critici restano nel fascicolo. Può ripresentarsi quando vuole.
-            </p>
-          )}
         </div>
       )}
-      <h2 className="font-display text-4xl leading-none">Il percorso verso il verbale</h2>
-      <p className="mt-1 text-muted-foreground">
-        {course} ·{" "}
-        <button className="underline hover:text-pop" onClick={onSetup}>
-          cambia programma
-        </button>
-      </p>
-      <div className="mt-8">
+
+      <div className="panel hero-card">
+        <div className="min-w-0">
+          <button className="pill" onClick={onMaterials} aria-label={`Corso: ${course}. Cambia`}>
+            <Icon name="book" size={18} />
+            {course}
+          </button>
+          <h2 className="mt-4 font-display text-5xl leading-none md:text-6xl">{next.title}</h2>
+          <p className="mt-2 max-w-md text-muted-foreground">{next.text}</p>
+          {!boss && (
+            <ul className="mt-4 flex flex-wrap gap-2 text-sm">
+              <li className="fact">
+                <Icon name="book" size={18} />3 argomenti
+              </li>
+              <li className="fact">
+                <Heart size={16} />
+                {START_CREDITS} crediti, ne servono {PASS_THRESHOLD}
+              </li>
+              <li className="fact">
+                <Icon name="bubble" size={18} />
+                circa 10 minuti
+              </li>
+            </ul>
+          )}
+          {ready ? (
+            <button className="btn-main mt-6 w-full md:w-auto" onClick={next.go}>
+              {next.cta}
+            </button>
+          ) : (
+            <button className="btn-ghost mt-6 w-full md:w-auto" onClick={onMaterials}>
+              Aggiungi almeno 3 argomenti
+            </button>
+          )}
+        </div>
+        <div className="hero-art" aria-hidden="true">
+          <div className="anim-float">
+            <Icon name={boss ? "check" : unlocked ? "crown" : "door"} size={96} />
+          </div>
+          <Student size={80} />
+        </div>
+      </div>
+
+      <h3 className="mt-8 font-display text-3xl leading-none">Il percorso</h3>
+      <div className="mt-3">
         <QuestMap
           required={REQUIRED_SESSIONS}
           passed={passed}
@@ -541,31 +486,35 @@ function Hub({
           onEnter={unlocked ? onBoss : onSession}
         />
       </div>
-      <div className="mt-10 flex flex-wrap gap-3">
-        {!unlocked && (
-          <button className="btn-main" onClick={onSession}>
-            Estrai una seduta
-          </button>
-        )}
-        {unlocked && !boss && (
-          <button className="btn-main" onClick={onBoss}>
-            Presentati al Presidente
-          </button>
-        )}
-        {boss && (
-          <button className="btn-main" onClick={onReport}>
-            Leggi il verbale finale
-          </button>
-        )}
-        {unlocked && (
-          <button className="btn-ghost" onClick={onSession}>
-            Seduta di allenamento
-          </button>
-        )}
-        <button className="btn-ghost" onClick={onReset}>
-          Ricomincia da capo
+
+      {first && (
+        <>
+          <h3 className="mt-8 font-display text-3xl leading-none">Come funziona</h3>
+          <ol className="mt-3 grid gap-3 md:grid-cols-3">
+            <li className="panel how-card">
+              <Coins n={3} />
+              <b>Punta sulla tua sicurezza</b>
+              <span>Più monete rischi, più crediti vinci. O perdi.</span>
+            </li>
+            <li className="panel how-card">
+              <Icon name="bubble" size={36} />
+              <b>Rispondi all'esaminatore</b>
+              <span>Ti incalza con domande di approfondimento.</span>
+            </li>
+            <li className="panel how-card">
+              <Icon name="crown" size={36} />
+              <b>Affronta il Presidente</b>
+              <span>Dopo {REQUIRED_SESSIONS} sedute, torna sui tuoi punti deboli.</span>
+            </li>
+          </ol>
+        </>
+      )}
+
+      {unlocked && !boss && ready && (
+        <button className="btn-ghost mt-8 w-full md:w-auto" onClick={onSession}>
+          Seduta di allenamento
         </button>
-      </div>
+      )}
     </section>
   );
 }
@@ -574,12 +523,15 @@ function Session({
   live,
   setLive: commit,
   onEnd,
+  onQuit,
   ai,
   voice,
 }: {
   live: Live;
   setLive: (l: Live) => void;
   onEnd: (l: Live) => void;
+  /** Abbandona la seduta (chiede conferma). */
+  onQuit: () => void;
   ai: boolean;
   /** Variante vocale: l'esaminatore parla e si può rispondere al microfono. */
   voice: boolean;
@@ -866,242 +818,292 @@ function Session({
   );
 
   return (
-    <section className="grid gap-6 md:grid-cols-[260px_1fr]">
-      <aside className="panel h-fit p-5">
-        <div className="mb-4 hidden md:block">
-          <Portrait who={who} mood={mood} name={profName} size={128} />
-        </div>
-        <div className="eyebrow text-pop">{live.isBoss ? PRESIDENT.title : ex!.title}</div>
-        <div className="mt-1 font-display text-2xl leading-none">{profName}</div>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {live.isBoss ? "Ha davanti a sé il suo fascicolo completo." : ex!.trait}
-        </p>
-        <div className="mt-6 border-t-2 border-ink/15 pt-4">
-          <div className="eyebrow text-muted-foreground">Crediti Fiducia</div>
-          <div className="font-display text-6xl leading-none">{live.credits}</div>
-          <div
-            className="meter mt-2"
-            style={
-              {
-                "--fill":
-                  live.credits >= PASS_THRESHOLD
-                    ? "var(--quest-green)"
-                    : live.credits >= START_CREDITS
-                      ? "var(--quest-yellow)"
-                      : "var(--quest-red)",
-              } as React.CSSProperties
-            }
-          >
-            <div
-              style={{
-                width: `${Math.min(100, Math.max(0, (live.credits / PASS_THRESHOLD) * 100))}%`,
-              }}
+    <div className="mx-auto max-w-5xl px-4 pb-6 pt-3 md:px-6">
+      <div className="flex items-center gap-3">
+        <button className="icon-btn" onClick={onQuit} aria-label="Abbandona la seduta">
+          ✕
+        </button>
+        <ol
+          className="flex flex-1 gap-1.5"
+          aria-label={`Argomento ${live.idx + 1} di ${live.topics.length}`}
+        >
+          {live.topics.map((t, i) => (
+            <li
+              key={t.id}
+              className={`step-seg ${
+                i < live.idx || (i === live.idx && live.step === "result")
+                  ? "step-seg-on"
+                  : i === live.idx
+                    ? "step-seg-now"
+                    : ""
+              }`}
             />
-          </div>
-          <div className="mt-1 text-xs text-muted-foreground">
-            Soglia di convalida: {PASS_THRESHOLD}
-          </div>
-        </div>
-        <div className="mt-4 border-t-2 border-ink/15 pt-4">
-          <div className="eyebrow mb-1 text-muted-foreground">Tensione</div>
-          <Pulse bpm={bpm} />
-        </div>
-        <div className="mt-4 text-sm text-muted-foreground">
-          Domanda {live.idx + 1} di {live.topics.length}
-        </div>
-      </aside>
-
-      <div className="panel flex min-h-[560px] flex-col p-6">
-        <div className="eyebrow text-muted-foreground">{topic.course}</div>
-        <h2 className="font-display text-3xl leading-none">{topic.title}</h2>
-
-        {live.step === "declare" && (
-          <div className="mt-6">
-            {live.isBoss && live.bossNotes[topic.id] && (
-              <p className="mb-4 border-l-4 border-quest-yellow pl-4 font-display text-xl leading-none">
-                «{live.bossNotes[topic.id]}»
-              </p>
-            )}
-            <p className="text-muted-foreground">
-              Prima di ascoltare la domanda, dichiari il suo livello di sicurezza su questo
-              argomento.
-            </p>
-            <div className="mt-5 grid gap-3 md:grid-cols-3">
-              {(Object.keys(CONFIDENCE) as Confidence[]).map((c) => (
-                <button
-                  key={c}
-                  onClick={() => declare(c)}
-                  disabled={!!busy}
-                  className="panel p-4 text-left transition disabled:pointer-events-none disabled:opacity-50"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-display text-3xl leading-none">
-                      {CONFIDENCE[c].label}
-                    </span>
-                    <Coins n={CONFIDENCE[c].mult} />
-                  </div>
-                  <div className="mt-1 text-xs text-muted-foreground">{CONFIDENCE[c].desc}</div>
-                  <div className="mt-3 text-xs">
-                    ×{CONFIDENCE[c].mult} crediti · −{CONFIDENCE[c].penalty} se insufficiente ·{" "}
-                    {CONFIDENCE[c].followUps} follow-up
-                  </div>
-                </button>
-              ))}
+          ))}
+        </ol>
+        <span className="stat-chip">
+          <Heart size={18} />
+          <span className="sr-only">Crediti Fiducia:</span>
+          {live.credits}
+        </span>
+      </div>
+      <section className="mt-4 grid gap-4 md:grid-cols-[260px_minmax(0,1fr)] md:gap-6">
+        <aside className="panel h-fit p-3 md:p-5">
+          <div className="flex items-center gap-3 md:block">
+            <div className="md:hidden">
+              <Portrait who={who} mood={mood} name={profName} size={56} />
             </div>
-            {live.isBoss ? (
-              <p className="mt-4 text-sm text-muted-foreground">
-                Davanti al Presidente non è ammesso il rinvio a giudizio: deve rispondere a ogni
-                domanda.
-              </p>
-            ) : (
-              <button
-                onClick={() => declare("lacuna")}
-                disabled={!!busy}
-                className="btn-ghost mt-4 w-full disabled:pointer-events-none disabled:opacity-50"
-              >
-                Rinvio a giudizio · dichiaro una lacuna (−2 crediti)
-              </button>
-            )}
-            {busy && (
-              <div className="mt-4">
-                <Busy text={busy} />
-              </div>
-            )}
-          </div>
-        )}
-
-        {live.step !== "declare" && (
-          <>
-            <div className="mt-4 flex-1 space-y-3 overflow-y-auto pr-1">
-              {live.transcript.map((m, i) =>
-                i === lastProf ? (
-                  // La battuta corrente dell'esaminatore: riquadro di dialogo con ritratto.
-                  <div key={i} className="dialog-box">
-                    <Portrait who={who} mood={mood} name={profName} size={72} />
-                    <div className="min-w-0 flex-1">
-                      <div className="mb-1 eyebrow text-pop">{profName}</div>
-                      {m.text === fresh ? <Typewriter text={m.text} /> : m.text}
-                      {voice && (
-                        <button
-                          className="mt-2 flex min-h-11 items-center eyebrow text-pop underline disabled:no-underline disabled:opacity-60"
-                          disabled={speech === "loading"}
-                          onClick={() =>
-                            speech === "playing" ? stop() : void speak(m.text, who, mood)
-                          }
-                        >
-                          {speech === "loading"
-                            ? "Preparo la voce…"
-                            : speech === "playing"
-                              ? "■ Ferma la voce"
-                              : "▶ Riascolta"}
-                        </button>
-                      )}
-                      {voice && mute && (
-                        <p role="status" className="text-sm text-destructive">
-                          Voce non disponibile ora (limite del servizio raggiunto): prosegua
-                          leggendo, oppure riprovi tra poco.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div
-                    key={i}
-                    className={`bubble max-w-[85%] ${m.role === "prof" ? "" : "bubble-me ml-auto"}`}
-                  >
-                    <div className="mb-1 eyebrow text-muted-foreground">
-                      {m.role === "prof" ? profName : "Studente"}
-                    </div>
-                    {m.text}
-                  </div>
-                ),
-              )}
-              {pending && (
-                <div className="bubble bubble-me ml-auto max-w-[85%]">
-                  <div className="mb-1 eyebrow text-muted-foreground">Studente</div>
-                  {pending}
-                </div>
-              )}
-              {busy && <Busy text={busy} />}
-              <div ref={endRef} />
+            <div className="mb-4 hidden md:block">
+              <Portrait who={who} mood={mood} name={profName} size={128} />
             </div>
-            {live.step === "dialog" && (
-              <div className="mt-4">
-                <div className="mb-2 text-xs text-muted-foreground">
-                  Sicurezza: {CONFIDENCE[live.conf as Confidence].label} · approfondimento{" "}
-                  {live.asked}/{maxFU}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <textarea
-                    autoFocus
-                    aria-label="La tua risposta"
-                    disabled={!!busy}
-                    className="field min-h-20 min-w-48 flex-1"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    placeholder={
-                      voice ? "Parli o scriva la risposta…" : "Risponda all'esaminatore…"
-                    }
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        send();
-                      }
-                    }}
-                  />
-                  {voice && (
-                    <div className="self-end">
-                      <Mic
-                        disabled={!!busy}
-                        onText={(t) => setInput((v) => (v.trim() ? `${v.trim()} ${t}` : t))}
-                      />
-                    </div>
-                  )}
+            <div className="min-w-0 flex-1">
+              <div className="eyebrow text-pop">{live.isBoss ? PRESIDENT.title : ex!.title}</div>
+              <div className="font-display text-2xl leading-none md:mt-1">{profName}</div>
+              <p className="mt-2 hidden text-sm text-muted-foreground md:block">
+                {live.isBoss ? "Ha davanti a sé il suo fascicolo completo." : ex!.trait}
+              </p>
+            </div>
+          </div>
+          <div className="mt-3 md:mt-6 md:border-t-2 md:border-ink/15 md:pt-4">
+            <div className="hidden md:block">
+              <div className="eyebrow text-muted-foreground">Crediti Fiducia</div>
+              <div className="font-display text-6xl leading-none">{live.credits}</div>
+            </div>
+            <div
+              className="meter md:mt-2"
+              style={
+                {
+                  "--fill":
+                    live.credits >= PASS_THRESHOLD
+                      ? "var(--quest-green)"
+                      : live.credits >= START_CREDITS
+                        ? "var(--quest-yellow)"
+                        : "var(--quest-red)",
+                } as React.CSSProperties
+              }
+            >
+              <div
+                className="meter-grow"
+                style={{
+                  width: `${Math.min(100, Math.max(0, (live.credits / PASS_THRESHOLD) * 100))}%`,
+                }}
+              />
+            </div>
+            <div className="mt-1 text-xs text-muted-foreground">
+              {live.credits} crediti · soglia di convalida {PASS_THRESHOLD}
+            </div>
+          </div>
+          <div className="mt-3 md:mt-4 md:border-t-2 md:border-ink/15 md:pt-4">
+            <div className="mb-1 hidden eyebrow text-muted-foreground md:block">Tensione</div>
+            <Pulse bpm={bpm} />
+          </div>
+        </aside>
+
+        <div className="panel flex min-h-[55dvh] flex-col p-4 md:min-h-[560px] md:p-6">
+          <div className="eyebrow text-muted-foreground">{topic.course}</div>
+          <h2 className="font-display text-3xl leading-none">{topic.title}</h2>
+
+          {live.step === "declare" && (
+            <div className="mt-6">
+              {live.isBoss && live.bossNotes[topic.id] && (
+                <p className="mb-4 border-l-4 border-quest-yellow pl-4 font-display text-xl leading-none">
+                  «{live.bossNotes[topic.id]}»
+                </p>
+              )}
+              <p className="text-muted-foreground">
+                Prima di ascoltare la domanda, dichiari il suo livello di sicurezza su questo
+                argomento.
+              </p>
+              <div className="mt-5 grid gap-3 md:grid-cols-3">
+                {(Object.keys(CONFIDENCE) as Confidence[]).map((c) => (
                   <button
-                    className="btn-main self-end disabled:opacity-40"
-                    disabled={!input.trim() || !!busy}
-                    onClick={send}
+                    key={c}
+                    onClick={() => declare(c)}
+                    disabled={!!busy}
+                    className="panel anim-pop p-4 text-left disabled:pointer-events-none disabled:opacity-50"
                   >
-                    Rispondi
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-display text-3xl leading-none">
+                        {CONFIDENCE[c].label}
+                      </span>
+                      <Coins n={CONFIDENCE[c].mult} />
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">{CONFIDENCE[c].desc}</div>
+                    <div className="mt-3 text-xs">
+                      ×{CONFIDENCE[c].mult} crediti · −{CONFIDENCE[c].penalty} se insufficiente ·{" "}
+                      {CONFIDENCE[c].followUps} follow-up
+                    </div>
                   </button>
-                </div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                  Invio per rispondere · Maiusc+Invio per andare a capo
-                </div>
+                ))}
               </div>
-            )}
-            {live.step === "result" && last && (
-              <div className="mt-4 border-t-2 border-ink/15 pt-4">
-                <div className="flex flex-wrap items-end gap-6">
-                  <ScoreBars s={last.score} />
-                  <GapBars q={last} />
-                  <div
-                    className={`font-display text-5xl leading-none ${last.delta >= 0 ? "text-[var(--green-ink)]" : "text-destructive"}`}
-                  >
-                    {last.delta >= 0 ? "+" : ""}
-                    {last.delta}
-                  </div>
-                  <button className="btn-main ml-auto" onClick={next}>
-                    {live.idx + 1 >= live.topics.length ? "Chiudi la seduta" : "Prossimo argomento"}
-                  </button>
+              {live.isBoss ? (
+                <p className="mt-4 text-sm text-muted-foreground">
+                  Davanti al Presidente non è ammesso il rinvio a giudizio: deve rispondere a ogni
+                  domanda.
+                </p>
+              ) : (
+                <button
+                  onClick={() => declare("lacuna")}
+                  disabled={!!busy}
+                  className="btn-ghost mt-4 w-full disabled:pointer-events-none disabled:opacity-50"
+                >
+                  Rinvio a giudizio · dichiaro una lacuna (−2 crediti)
+                </button>
+              )}
+              {busy && (
+                <div className="mt-4">
+                  <Busy text={busy} />
                 </div>
-                <Coverage q={last} />
-                {last.feedback && (
-                  <div className="mt-3 border-2 border-ink p-4 text-sm">
-                    <div className="eyebrow text-pop">Giudizio dell'esaminatore</div>
-                    <p className="mt-1 leading-relaxed">{last.feedback}</p>
+              )}
+            </div>
+          )}
+
+          {live.step !== "declare" && (
+            <>
+              <div className="mt-4 flex-1 space-y-3 overflow-y-auto pr-1">
+                {live.transcript.map((m, i) =>
+                  i === lastProf ? (
+                    // La battuta corrente dell'esaminatore: riquadro di dialogo con ritratto.
+                    <div key={i} className="dialog-box">
+                      <Portrait who={who} mood={mood} name={profName} size={72} />
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-1 eyebrow text-pop">{profName}</div>
+                        {m.text === fresh ? <Typewriter text={m.text} /> : m.text}
+                        {voice && (
+                          <button
+                            className="mt-2 flex min-h-11 items-center eyebrow text-pop underline disabled:no-underline disabled:opacity-60"
+                            disabled={speech === "loading"}
+                            onClick={() =>
+                              speech === "playing" ? stop() : void speak(m.text, who, mood)
+                            }
+                          >
+                            {speech === "loading"
+                              ? "Preparo la voce…"
+                              : speech === "playing"
+                                ? "■ Ferma la voce"
+                                : "▶ Riascolta"}
+                          </button>
+                        )}
+                        {voice && mute && (
+                          <p role="status" className="text-sm text-destructive">
+                            Voce non disponibile ora (limite del servizio raggiunto): prosegua
+                            leggendo, oppure riprovi tra poco.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      key={i}
+                      className={`bubble max-w-[85%] ${m.role === "prof" ? "" : "bubble-me ml-auto"}`}
+                    >
+                      <div className="mb-1 eyebrow text-muted-foreground">
+                        {m.role === "prof" ? profName : "Studente"}
+                      </div>
+                      {m.text}
+                    </div>
+                  ),
+                )}
+                {pending && (
+                  <div className="bubble bubble-me ml-auto max-w-[85%]">
+                    <div className="mb-1 eyebrow text-muted-foreground">Studente</div>
+                    {pending}
                   </div>
                 )}
-                <details className="mt-3 rounded-md bg-secondary p-4 text-sm">
-                  <summary className="cursor-pointer eyebrow text-pop">Spiegazione modello</summary>
-                  <p className="mt-2 leading-relaxed">{last.model}</p>
-                </details>
+                {busy && <Busy text={busy} />}
+                <div ref={endRef} />
               </div>
-            )}
-          </>
-        )}
-      </div>
-    </section>
+              {live.step === "dialog" && (
+                <div className="mt-4">
+                  <div className="mb-2 text-xs text-muted-foreground">
+                    Sicurezza: {CONFIDENCE[live.conf as Confidence].label} · approfondimento{" "}
+                    {live.asked}/{maxFU}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <textarea
+                      autoFocus
+                      aria-label="La tua risposta"
+                      disabled={!!busy}
+                      className="field min-h-20 min-w-48 flex-1"
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      placeholder={
+                        voice ? "Parli o scriva la risposta…" : "Risponda all'esaminatore…"
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          send();
+                        }
+                      }}
+                    />
+                    {voice && (
+                      <div className="self-end">
+                        <Mic
+                          disabled={!!busy}
+                          onText={(t) => setInput((v) => (v.trim() ? `${v.trim()} ${t}` : t))}
+                        />
+                      </div>
+                    )}
+                    <button
+                      className="btn-main self-end disabled:opacity-40"
+                      disabled={!input.trim() || !!busy}
+                      onClick={send}
+                    >
+                      Rispondi
+                    </button>
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    Invio per rispondere · Maiusc+Invio per andare a capo
+                  </div>
+                </div>
+              )}
+              {live.step === "result" && last && (
+                <div
+                  className={`result-sheet anim-slide ${last.score.total >= 6 ? "result-good" : "result-bad"}`}
+                >
+                  <div className="mb-3 flex items-center gap-2 font-display text-4xl leading-none">
+                    {last.score.total >= 6 && <Icon name="check" size={32} />}
+                    {last.confidence === "lacuna"
+                      ? "Lacuna dichiarata"
+                      : last.score.total >= 6
+                        ? "Risposta sufficiente"
+                        : "Risposta insufficiente"}
+                  </div>
+                  <div className="flex flex-wrap items-end gap-6">
+                    <ScoreBars s={last.score} />
+                    <GapBars q={last} />
+                    <div
+                      className={`font-display text-5xl leading-none ${last.delta >= 0 ? "text-[var(--green-ink)]" : "text-destructive"}`}
+                    >
+                      {last.delta >= 0 ? "+" : ""}
+                      {last.delta}
+                    </div>
+                    <button className="btn-main w-full md:ml-auto md:w-auto" onClick={next}>
+                      {live.idx + 1 >= live.topics.length
+                        ? "Chiudi la seduta"
+                        : "Prossimo argomento"}
+                    </button>
+                  </div>
+                  <Coverage q={last} />
+                  {last.feedback && (
+                    <div className="mt-3 border-2 border-ink p-4 text-sm">
+                      <div className="eyebrow text-pop">Giudizio dell'esaminatore</div>
+                      <p className="mt-1 leading-relaxed">{last.feedback}</p>
+                    </div>
+                  )}
+                  <details className="mt-3 rounded-md bg-secondary p-4 text-sm">
+                    <summary className="cursor-pointer eyebrow text-pop">
+                      Spiegazione modello
+                    </summary>
+                    <p className="mt-2 leading-relaxed">{last.model}</p>
+                  </details>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -1212,13 +1214,29 @@ function Debrief({
       sessionReportMarkdown(s, title, date.toLocaleDateString("it-IT")),
     );
   return (
-    <section>
-      <div className="eyebrow text-pop">Referto di seduta</div>
-      <h2 className="mt-2 font-display text-4xl leading-none">
-        {title} · {s.examinerName}
-      </h2>
+    <section className="anim-slide">
+      <div className={`panel debrief-hero ${s.passed ? "result-good" : "result-bad"}`}>
+        <div className="anim-pop">
+          <Portrait
+            who={s.examiner as Who}
+            mood={s.passed ? "pleased" : "stern"}
+            name={s.examinerName}
+            size={96}
+          />
+        </div>
+        <div className="min-w-0">
+          <div className="eyebrow text-muted-foreground">
+            {title} · {s.examinerName}
+          </div>
+          <h2 className="stamp anim-pop mt-1">{s.passed ? "Convalidata" : "Non convalidata"}</h2>
+        </div>
+      </div>
       <div className="mt-6 grid gap-4 md:grid-cols-3">
-        <Stat label="Esito" value={s.passed ? "Convalidata" : "Non convalidata"} big />
+        <Stat
+          label="Argomenti sufficienti"
+          value={`${strong.length} / ${s.questions.length}`}
+          big
+        />
         <Stat label="Crediti Fiducia" value={`${s.credits} / ${PASS_THRESHOLD}`} />
         <Stat label="Calibrazione sicurezza" value={`${calibration(s.questions)}%`} />
       </div>
@@ -1303,11 +1321,9 @@ function Debrief({
 
 function Report({
   sessions,
-  onBack,
   onDebrief,
 }: {
   sessions: SessionRecord[];
-  onBack: () => void;
   onDebrief: (id: string) => void;
 }) {
   const qs = sessions.flatMap((s) => s.questions);
@@ -1323,14 +1339,14 @@ function Report({
   const final = sessions.some((s) => s.examiner === "presidente" && s.passed);
   const [open, setOpen] = useState<string | null>(null);
   return (
-    <section>
-      <button className="btn-ghost" onClick={onBack}>
-        ← Torna al percorso
-      </button>
-      <div className="mt-6 eyebrow text-pop">
-        {final ? "Verbale d'esame" : "Fascicolo provvisorio"}
-      </div>
-      <div className="mt-4 grid gap-4 md:grid-cols-4">
+    <section className="anim-slide">
+      <h2 className="font-display text-5xl leading-none">
+        {final ? "Verbale d'esame" : "Fascicolo"}
+      </h2>
+      {!final && (
+        <p className="mt-2 text-muted-foreground">Provvisorio: si aggiorna a ogni seduta.</p>
+      )}
+      <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
         <Stat label={final ? "Voto finale" : "Voto stimato"} value={grade} big />
         <Stat label="Calibrazione sicurezza" value={`${cal}%`} />
         <Stat label="Media argomenti" value={`${avg}/10`} />

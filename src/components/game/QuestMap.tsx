@@ -221,7 +221,9 @@ export function QuestMap({
       <ol className="grid gap-y-1 px-2 pb-4 pt-1 text-center" style={cols}>
         {stops.map((s) => (
           <li key={s.key} className="min-w-0 px-1">
-            <div className={`font-display text-2xl leading-none ${s.active ? "text-pop" : ""}`}>
+            <div
+              className={`font-display text-xl leading-none md:text-2xl ${s.active ? "text-pop" : ""}`}
+            >
               {s.title}
             </div>
             <div className="text-xs text-muted-foreground">{s.status}</div>

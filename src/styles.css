@@ -225,6 +225,7 @@
   .btn-ghost:disabled {
     cursor: not-allowed;
     transform: none;
+    opacity: 0.4;
   }
 
   /* Voci di navigazione: area di tocco piena, pagina corrente sottolineata. */
@@ -244,6 +245,382 @@
   }
   .nav-link[aria-current="page"] {
     box-shadow: inset 0 -4px 0 0 var(--red-ink);
+  }
+
+  /* ── Cornice dell'app ─────────────────────────────────────────────────────────────────── */
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: var(--card);
+    border-bottom: 4px solid var(--ink);
+  }
+  /* Schede: in basso su telefono (a portata di pollice), colonna a sinistra su schermi larghi. */
+  .tabbar {
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 30;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    background: var(--card);
+    border-top: 4px solid var(--ink);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-height: 64px;
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    line-height: 1;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+    border-top: 4px solid transparent;
+    margin-top: -4px;
+  }
+  .tab svg {
+    transition: transform 0.12s steps(3);
+  }
+  .tab[aria-current="page"] {
+    color: var(--ink);
+    background: color-mix(in oklab, var(--quest-yellow) 28%, var(--card));
+    border-top-color: var(--quest-red);
+  }
+  .tab[aria-current="page"] svg {
+    transform: translateY(-3px) scale(1.12);
+  }
+  @media (min-width: 768px) {
+    .tabbar {
+      position: sticky;
+      top: 76px;
+      inset: auto;
+      align-self: start;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 2rem;
+      padding: 0;
+      border: 0;
+      background: transparent;
+    }
+    .tab {
+      flex-direction: row;
+      justify-content: flex-start;
+      gap: 0.75rem;
+      min-height: 52px;
+      padding: 0 0.75rem;
+      margin: 0;
+      font-size: 1.5rem;
+      border: 3px solid transparent;
+    }
+    .tab:hover {
+      color: var(--ink);
+    }
+    .tab[aria-current="page"] {
+      border-color: var(--ink);
+      box-shadow: 4px 4px 0 0 var(--ink);
+    }
+    .tab[aria-current="page"] svg {
+      transform: none;
+    }
+  }
+
+  .stat-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: 36px;
+    padding: 0 0.625rem;
+    border: 3px solid var(--ink);
+    background: var(--card);
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    line-height: 1;
+  }
+  .avatar-btn {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border: 3px solid var(--ink);
+    background: color-mix(in oklab, var(--quest-blue) 18%, var(--card));
+    box-shadow: 3px 3px 0 0 var(--ink);
+    overflow: hidden;
+    transition: transform 0.08s steps(2);
+  }
+  .avatar-btn:active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0 0 var(--ink);
+  }
+  .sheet .avatar-btn {
+    width: 72px;
+    height: 72px;
+  }
+  .icon-btn {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    flex: none;
+    border: 3px solid var(--ink);
+    background: var(--card);
+    font-size: 1.25rem;
+    line-height: 1;
+  }
+  .icon-btn:disabled {
+    opacity: 0.3;
+  }
+  /* Scorciatoia discreta per saltare un passo della simulazione. */
+  .skip-btn {
+    min-height: 44px;
+    padding: 0 0.5rem;
+    font-size: 0.8rem;
+    color: var(--muted-foreground);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .skip-btn:hover {
+    color: var(--ink);
+  }
+  .skip-btn:disabled {
+    opacity: 0.4;
+  }
+
+  /* Avanzamento a segmenti: passi della configurazione e argomenti della seduta. */
+  .step-seg {
+    flex: 1;
+    height: 12px;
+    border: 3px solid var(--ink);
+    background: var(--card);
+    transition: background-color 0.25s;
+  }
+  .step-seg-on {
+    background: var(--quest-green);
+  }
+  .step-seg-now {
+    background: var(--quest-yellow);
+  }
+
+  /* ── Configurazione iniziale ──────────────────────────────────────────────────────────── */
+  .scene {
+    border: 3px solid var(--ink);
+    background: color-mix(in oklab, var(--quest-blue) 10%, var(--card));
+    box-shadow: 6px 6px 0 0 var(--ink);
+    padding: 1.5rem 1rem 0;
+    overflow: hidden;
+  }
+  .sim-chip {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border: 2px dashed var(--ink);
+    background: color-mix(in oklab, var(--quest-yellow) 35%, var(--card));
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .task {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 44px;
+    padding: 0 0.75rem;
+    border: 3px solid var(--ink);
+    background: var(--card);
+    transition: opacity 0.2s;
+  }
+  .task-wait {
+    opacity: 0.45;
+  }
+  .task-run {
+    background: color-mix(in oklab, var(--quest-yellow) 30%, var(--card));
+  }
+  .task-mark {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+  }
+  .radio-dot {
+    width: 22px;
+    height: 22px;
+    flex: none;
+    border: 3px solid var(--ink);
+    background: var(--card);
+  }
+  .radio-dot-on {
+    background: var(--quest-blue);
+    box-shadow: inset 0 0 0 3px var(--card);
+  }
+  .topic-chip {
+    padding: 0.25rem 0.625rem;
+    border: 3px solid var(--ink);
+    background: color-mix(in oklab, var(--quest-green) 22%, var(--card));
+    font-size: 0.875rem;
+  }
+
+  /* ── Schede ───────────────────────────────────────────────────────────────────────────── */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 44px;
+    padding: 0 0.875rem;
+    border: 3px solid var(--ink);
+    background: var(--card);
+    font-family: var(--font-display);
+    font-size: 1.35rem;
+    line-height: 1;
+  }
+  .pill-on {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .hero-card {
+    display: grid;
+    gap: 1.25rem;
+    padding: 1.25rem;
+    background: color-mix(in oklab, var(--quest-yellow) 16%, var(--card));
+  }
+  .hero-art {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 1rem;
+  }
+  @media (min-width: 768px) {
+    .hero-card {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      padding: 2rem;
+    }
+  }
+  .fact {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.5rem;
+    border: 2px solid var(--ink);
+    background: var(--card);
+  }
+  .how-card {
+    display: grid;
+    gap: 0.375rem;
+    align-content: start;
+    padding: 1rem;
+    font-size: 0.9rem;
+  }
+  .how-card b {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    font-weight: 400;
+    line-height: 1;
+  }
+  .how-card span:last-child {
+    color: var(--muted-foreground);
+  }
+  .lesson-n {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    flex: none;
+    border: 3px solid var(--ink);
+    background: color-mix(in oklab, var(--quest-blue) 18%, var(--card));
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    line-height: 1;
+  }
+
+  /* Profilo: foglio dal basso su telefono, pannello a destra su schermi larghi. */
+  .sheet-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    background: color-mix(in oklab, var(--ink) 55%, transparent);
+  }
+  .sheet {
+    width: 100%;
+    max-width: 30rem;
+    max-height: 90dvh;
+    overflow-y: auto;
+    padding: 1.25rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom));
+    background: var(--card);
+    border: 4px solid var(--ink);
+    border-bottom: 0;
+    animation: slide-up 0.22s steps(6) both;
+  }
+  @media (min-width: 768px) {
+    .sheet-backdrop {
+      align-items: flex-start;
+      justify-content: flex-end;
+      padding: 76px 1.5rem 0;
+    }
+    .sheet {
+      max-width: 24rem;
+      border-bottom: 4px solid var(--ink);
+      box-shadow: 6px 6px 0 0 var(--ink);
+      animation-name: pop-in;
+    }
+  }
+
+  /* ── Esito di una risposta e di una seduta ────────────────────────────────────────────── */
+  .result-sheet {
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 3px solid var(--ink);
+  }
+  .result-good {
+    background: color-mix(in oklab, var(--quest-green) 16%, var(--card));
+  }
+  .result-bad {
+    background: color-mix(in oklab, var(--quest-red) 12%, var(--card));
+  }
+  .debrief-hero {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+  }
+  .stamp {
+    display: inline-block;
+    padding: 0.125rem 0.625rem;
+    border: 4px solid currentColor;
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 9vw, 3.75rem);
+    line-height: 1;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    transform: rotate(-3deg);
+  }
+  .result-good .stamp {
+    color: var(--green-ink);
+  }
+  .result-bad .stamp {
+    color: var(--red-ink);
+  }
+
+  /* ── Movimento: brevi, a scatti come un gioco a pixel. Spento con "riduci movimento". ──── */
+  .meter-grow {
+    transition: width 0.45s steps(8);
+  }
+  .anim-slide {
+    animation: slide-up 0.28s steps(7) both;
+  }
+  .anim-pop {
+    animation: pop-in 0.3s steps(6) both;
+  }
+  .anim-float {
+    animation: float 2.4s steps(6) infinite alternate;
   }
 
   /* Selettore Testo / Voce: due tasti affiancati, quello attivo è pieno. */
@@ -394,5 +771,26 @@
   *::after {
     animation: none !important;
     transition: none !important;
+  }
+}
+
+/* Le animazioni muovono soltanto: non partono mai da trasparente, così il contenuto resta
+   leggibile anche se il browser non le fa avanzare (scheda in secondo piano, risparmio energia). */
+@keyframes slide-up {
+  from {
+    transform: translateY(18px);
+  }
+}
+@keyframes pop-in {
+  0% {
+    transform: scale(0.8);
+  }
+  70% {
+    transform: scale(1.06);
+  }
+}
+@keyframes float {
+  to {
+    transform: translateY(-8px);
   }
 }

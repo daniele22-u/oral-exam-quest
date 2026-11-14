@@ -2,6 +2,13 @@
 
 Simulatore gamificato di esame orale universitario: un serious game accademico in cui non basta sapere, bisogna sapere _quanto_ si sa.
 
+## Esperienza d'uso
+
+- **Configurazione iniziale**: un passo per schermata. Si "collegano" i Servizi Online del Politecnico e WeBeep, si sceglie il corso e l'app mostra lezioni, registrazioni, trascrizioni e appunti che diventano argomenti d'esame. **È una simulazione**: non vengono chieste credenziali e non parte alcuna richiesta verso quei servizi; ogni passo si può saltare ("Salta · demo").
+- **Tre schede**: Percorso, Materiali, Fascicolo. Su telefono stanno in una barra in basso, su schermi larghi in una colonna a sinistra. Il profilo è in alto a destra (servizi collegati, Testo/Voce, azzeramento).
+- **Seduta a tutto schermo**: durante l'esame spariscono schede e profilo; restano avanzamento, crediti e la ✕ per abbandonare.
+- Linee guida seguite: aree di tocco di almeno 44 px, testo dei campi a 16 px, stato mai affidato al solo colore, rispetto di "riduci movimento" e delle aree sicure dei telefoni.
+
 ## Come si gioca
 
 1. **Scegli il programma**: Signal Processing, Neuroengineering o una materia personalizzata (nome del corso + almeno 3 argomenti).

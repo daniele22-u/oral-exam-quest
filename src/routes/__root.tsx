@@ -80,8 +80,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     // twitter:image here: every page without its own would inherit the root's preview image.
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Commissione — Simulatore d'esame orale" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+      { title: "Oral Exam Quest — Simulatore d'esame orale" },
       { name: "description", content: "Serious game per esami orali universitari." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
