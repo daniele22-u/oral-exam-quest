@@ -28,3 +28,5 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+- Exam game logic (scoring, credits, calibration, boss topic selection) lives in src/lib/game/engine.ts as pure functions; demo scoring is keyword-based so the game runs without AI keys, and an AI evaluator can replace scoreAnswers later.
