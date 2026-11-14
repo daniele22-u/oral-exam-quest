@@ -59,7 +59,16 @@ export async function geminiJson<T>(opts: {
  * possono cambiare con GEMINI_TTS_MODEL e GEMINI_STT_MODEL.
  */
 const ttsModel = () => process.env["GEMINI_TTS_MODEL"]?.trim() || "gemini-3.8-flash-lite-tts";
-const TTS_FALLBACK = "gemini-3.8-flash-tts";
+// Ripieghi in ordine di rapidità: il piano gratuito concede a ciascun modello vocale poche
+// richieste al minuto e una decina al giorno, quindi si passa al successivo quando uno è esaurito.
+const TTS_FALLBACKS = [
+  "gemini-3.8-flash-tts",
+  "gemini-3.1-flash-tts-preview",
+  "gemini-2.5-flash-preview-tts",
+];
+// Un modello che ha appena rifiutato per quota viene saltato per un po', senza richiederlo invano.
+const exhausted = new Map<string, number>();
+const SKIP_MS = 60_000;
 const sttModel = () => process.env["GEMINI_STT_MODEL"]?.trim() || "gemini-3.5-transcribe";
 
 async function geminiCall(model: string, body: unknown, timeoutMs: number): Promise<unknown> {
@@ -123,16 +132,27 @@ export async function geminiSpeech(opts: {
       speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: opts.voice } } },
     },
   };
-  // Il piano gratuito concede poche richieste al minuto per modello vocale: se il primo è saturo
-  // o non risponde si prova il secondo prima di rinunciare alla voce.
-  const data = (await geminiCall(ttsModel(), body, 15_000).catch(() =>
-    geminiCall(TTS_FALLBACK, body, 20_000),
-  )) as {
+  const models = [...new Set([ttsModel(), ...TTS_FALLBACKS])];
+  const now = Date.now();
+  const ready = models.filter((m) => (exhausted.get(m) ?? 0) <= now);
+  let data: unknown;
+  let failure: unknown = new Error("Voce non disponibile: quota esaurita su tutti i modelli");
+  for (const model of ready.length ? ready : models) {
+    try {
+      data = await geminiCall(model, body, 15_000);
+      break;
+    } catch (e) {
+      failure = e;
+      if (e instanceof Error && e.message.includes("429")) exhausted.set(model, now + SKIP_MS);
+    }
+  }
+  if (data === undefined) throw failure;
+  const out = data as {
     candidates?: {
       content?: { parts?: { inlineData?: { mimeType?: string; data?: string } }[] };
     }[];
   };
-  const audio = data.candidates?.[0]?.content?.parts?.find((p) => p.inlineData?.data)?.inlineData;
+  const audio = out.candidates?.[0]?.content?.parts?.find((p) => p.inlineData?.data)?.inlineData;
   if (!audio?.data) throw new Error("Gemini non ha restituito audio");
   const mime = (audio.mimeType ?? "").toLowerCase();
   if (mime.includes("wav")) return audio.data;
@@ -140,12 +160,30 @@ export async function geminiSpeech(opts: {
   return toBase64(wavFromPcm(fromBase64(audio.data), rate));
 }
 
-/** Trascrizione di un file WAV in base64. */
+/**
+ * Trascrizione di un file WAV in base64. Se il modello dedicato è sovraccarico o lento si ripiega
+ * sul modello di testo, che accetta audio e trascrive su richiesta.
+ */
 export async function geminiTranscribe(wavBase64: string): Promise<string> {
-  const data = (await geminiCall(
-    sttModel(),
-    { contents: [{ parts: [{ inlineData: { mimeType: "audio/wav", data: wavBase64 } }] }] },
-    25_000,
+  const audio = { inlineData: { mimeType: "audio/wav", data: wavBase64 } };
+  const data = (await geminiCall(sttModel(), { contents: [{ parts: [audio] }] }, 10_000).catch(() =>
+    geminiCall(
+      process.env["GEMINI_MODEL"]?.trim() || "gemini-flash-lite-latest",
+      {
+        contents: [
+          {
+            parts: [
+              {
+                text: "Trascrivi fedelmente in italiano questo audio. Restituisci solo la trascrizione, senza commenti né correzioni.",
+              },
+              audio,
+            ],
+          },
+        ],
+        generationConfig: { temperature: 0 },
+      },
+      15_000,
+    ),
   )) as {
     candidates?: {
       content?: { parts?: { text?: string; audioTranscription?: { text?: string } }[] };

@@ -845,7 +845,7 @@ function Session({
   const who: Who = live.isBoss ? "presidente" : ex!.id;
   const lastProf = live.transcript.map((m) => m.role).lastIndexOf("prof");
   // Voce: ogni nuova battuta dell'esaminatore viene letta; passando a "Testo" si interrompe.
-  const { speak, stop, state: speech } = useSpeaker();
+  const { speak, stop, state: speech, failed: mute } = useSpeaker();
   useEffect(() => {
     if (voice && fresh) void speak(fresh, who, mood);
     else stop();
@@ -986,6 +986,12 @@ function Session({
                               ? "■ Ferma la voce"
                               : "▶ Riascolta"}
                         </button>
+                      )}
+                      {voice && mute && (
+                        <p role="status" className="text-sm text-destructive">
+                          Voce non disponibile ora (limite del servizio raggiunto): prosegua
+                          leggendo, oppure riprovi tra poco.
+                        </p>
                       )}
                     </div>
                   </div>
