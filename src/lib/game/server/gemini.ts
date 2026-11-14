@@ -1,13 +1,13 @@
 /**
- * Chiamata minima a Gemini con risposta JSON vincolata da schema. Solo lato server: la chiave
- * viaggia nell'header e non compare mai in URL, log o codice del browser.
+ * Minimal Gemini call with a schema-constrained JSON response. Server-side only: the key
+ * travels in the header and never appears in URLs, logs or browser code.
  */
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
 const TIMEOUT_MS = 20_000;
 
 /**
- * Modello facoltativo per il solo giudizio finale (GEMINI_EVAL_MODEL): utile se si dispone di un
- * modello più capace. Di norma è più lento: se non risponde in tempo si ripiega su quello rapido.
+ * Optional model for the final assessment only (GEMINI_EVAL_MODEL): useful when a more capable
+ * model is available. It is usually slower: if it does not answer in time, fall back to the fast one.
  */
 export const evalModel = () => process.env["GEMINI_EVAL_MODEL"]?.trim() || undefined;
 
@@ -18,13 +18,13 @@ export async function geminiJson<T>(opts: {
   user: string;
   schema: Record<string, unknown>;
   temperature: number;
-  /** Modello da usare al posto di quello predefinito. */
+  /** Model to use instead of the default. */
   model?: string;
 }): Promise<T> {
   const key = geminiKey();
-  if (!key) throw new Error("GEMINI_API_KEY non configurata");
-  // Il modello "lite" risponde in circa un secondo, adatto a un dialogo d'esame; GEMINI_MODEL
-  // permette di sceglierne uno più capace senza toccare il codice.
+  if (!key) throw new Error("GEMINI_API_KEY not configured");
+  // The "lite" model answers in about a second, suited to an exam dialogue; GEMINI_MODEL
+  // lets you choose a more capable one without touching the code.
   const model = opts.model || process.env["GEMINI_MODEL"]?.trim() || "gemini-flash-lite-latest";
   const res = await fetch(`${ENDPOINT}/${model}:generateContent`, {
     method: "POST",
@@ -43,37 +43,37 @@ export async function geminiJson<T>(opts: {
   });
   if (!res.ok) {
     const detail = (await res.text()).slice(0, 300);
-    throw new Error(`Gemini ha risposto ${res.status}: ${detail}`);
+    throw new Error(`Gemini answered ${res.status}: ${detail}`);
   }
   const data = (await res.json()) as {
     candidates?: { content?: { parts?: { text?: string }[] } }[];
   };
   const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("");
-  if (!text) throw new Error("Gemini ha restituito una risposta vuota");
+  if (!text) throw new Error("Gemini returned an empty response");
   return JSON.parse(text) as T;
 }
 
 /**
- * Modelli vocali. Voce: variante "lite" del modello di sintesi, che risponde in un paio di secondi.
- * Ascolto: modello dedicato alla trascrizione, più fedele di un modello generico. Entrambi si
- * possono cambiare con GEMINI_TTS_MODEL e GEMINI_STT_MODEL.
+ * Voice models. Speech: the "lite" variant of the synthesis model, which answers in a couple
+ * of seconds. Listening: a dedicated transcription model, more faithful than a generic one.
+ * Both can be changed with GEMINI_TTS_MODEL and GEMINI_STT_MODEL.
  */
 const ttsModel = () => process.env["GEMINI_TTS_MODEL"]?.trim() || "gemini-3.8-flash-lite-tts";
-// Ripieghi in ordine di rapidità: il piano gratuito concede a ciascun modello vocale poche
-// richieste al minuto e una decina al giorno, quindi si passa al successivo quando uno è esaurito.
+// Fallbacks in order of speed: the free tier gives each voice model a few requests per minute
+// and about ten per day, so move on to the next one when one is exhausted.
 const TTS_FALLBACKS = [
   "gemini-3.8-flash-tts",
   "gemini-3.1-flash-tts-preview",
   "gemini-2.5-flash-preview-tts",
 ];
-// Un modello che ha appena rifiutato per quota viene saltato per un po', senza richiederlo invano.
+// A model that has just refused for quota is skipped for a while instead of being asked in vain.
 const exhausted = new Map<string, number>();
 const SKIP_MS = 60_000;
 const sttModel = () => process.env["GEMINI_STT_MODEL"]?.trim() || "gemini-3.5-transcribe";
 
 async function geminiCall(model: string, body: unknown, timeoutMs: number): Promise<unknown> {
   const key = geminiKey();
-  if (!key) throw new Error("GEMINI_API_KEY non configurata");
+  if (!key) throw new Error("GEMINI_API_KEY not configured");
   const res = await fetch(`${ENDPOINT}/${model}:generateContent`, {
     method: "POST",
     headers: { "content-type": "application/json", "x-goog-api-key": key },
@@ -82,12 +82,12 @@ async function geminiCall(model: string, body: unknown, timeoutMs: number): Prom
   });
   if (!res.ok) {
     const detail = (await res.text()).slice(0, 300);
-    throw new Error(`Gemini ha risposto ${res.status}: ${detail}`);
+    throw new Error(`Gemini answered ${res.status}: ${detail}`);
   }
   return res.json();
 }
 
-/** Intestazione WAV per audio PCM a 16 bit mono: alcuni modelli restituiscono solo i campioni. */
+/** WAV header for 16-bit mono PCM audio: some models return only the samples. */
 function wavFromPcm(pcm: Uint8Array, rate: number): Uint8Array {
   const out = new Uint8Array(44 + pcm.length);
   const v = new DataView(out.buffer);
@@ -117,15 +117,15 @@ function toBase64(bytes: Uint8Array): string {
   return btoa(s);
 }
 
-/** Sintesi vocale: restituisce un file WAV in base64. `style` descrive il tono, `voice` il timbro. */
+/** Speech synthesis: returns a base64 WAV file. `style` describes the tone, `voice` the timbre. */
 export async function geminiSpeech(opts: {
   text: string;
   voice: string;
   style: string;
 }): Promise<string> {
   const body = {
-    // Il tono va tra parentesi quadre: scritto come frase ("Leggi con tono…: …") il modello
-    // lo pronuncia insieme alla battuta.
+    // The tone goes in square brackets: written as a sentence ("Read in a … tone: …") the model
+    // speaks it along with the line.
     contents: [{ parts: [{ text: `[${opts.style}] ${opts.text}` }] }],
     generationConfig: {
       responseModalities: ["AUDIO"],
@@ -136,7 +136,7 @@ export async function geminiSpeech(opts: {
   const now = Date.now();
   const ready = models.filter((m) => (exhausted.get(m) ?? 0) <= now);
   let data: unknown;
-  let failure: unknown = new Error("Voce non disponibile: quota esaurita su tutti i modelli");
+  let failure: unknown = new Error("Voice unavailable: quota exhausted on all models");
   for (const model of ready.length ? ready : models) {
     try {
       data = await geminiCall(model, body, 15_000);
@@ -153,7 +153,7 @@ export async function geminiSpeech(opts: {
     }[];
   };
   const audio = out.candidates?.[0]?.content?.parts?.find((p) => p.inlineData?.data)?.inlineData;
-  if (!audio?.data) throw new Error("Gemini non ha restituito audio");
+  if (!audio?.data) throw new Error("Gemini returned no audio");
   const mime = (audio.mimeType ?? "").toLowerCase();
   if (mime.includes("wav")) return audio.data;
   const rate = Number(/rate=(\d+)/.exec(mime)?.[1] ?? 24000);
@@ -161,8 +161,8 @@ export async function geminiSpeech(opts: {
 }
 
 /**
- * Trascrizione di un file WAV in base64. Se il modello dedicato è sovraccarico o lento si ripiega
- * sul modello di testo, che accetta audio e trascrive su richiesta.
+ * Transcription of a base64 WAV file. If the dedicated model is overloaded or slow, fall back
+ * to the text model, which accepts audio and transcribes on request.
  */
 export async function geminiTranscribe(wavBase64: string): Promise<string> {
   const audio = { inlineData: { mimeType: "audio/wav", data: wavBase64 } };
@@ -174,7 +174,7 @@ export async function geminiTranscribe(wavBase64: string): Promise<string> {
           {
             parts: [
               {
-                text: "Trascrivi fedelmente in italiano questo audio. Restituisci solo la trascrizione, senza commenti né correzioni.",
+                text: "Transcribe this audio faithfully in English. Return only the transcript, with no comments or corrections.",
               },
               audio,
             ],

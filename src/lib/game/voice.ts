@@ -3,27 +3,27 @@ import { z } from "zod";
 import { geminiSpeech, geminiTranscribe } from "./server/gemini";
 
 /**
- * Variante vocale dell'esame: l'esaminatore parla (sintesi) e lo studente risponde a voce
- * (trascrizione). Come per l'esaminatore AI, ogni funzione restituisce `{ ok: false }` invece di
- * lanciare: se la voce non è disponibile l'esame prosegue per iscritto.
+ * Voice variant of the exam: the examiner speaks (synthesis) and the student answers by voice
+ * (transcription). As with the AI examiner, each function returns `{ ok: false }` instead of
+ * throwing: if voice is unavailable the exam continues in writing.
  *
- * L'audio dello studente viene inviato a Gemini solo per essere trascritto e non è salvato qui.
+ * The student's audio is sent to Gemini only to be transcribed and is not stored here.
  */
 
-// Un timbro per esaminatore, e un tono che segue l'espressione del ritratto.
+// One voice per examiner, and a tone that follows the portrait's expression.
 const VOICES = {
-  severo: { voice: "Kore", style: "tono fermo e asciutto" },
-  empatico: { voice: "Puck", style: "tono caldo e incoraggiante" },
-  distratto: { voice: "Charon", style: "tono svagato, soprappensiero" },
+  severo: { voice: "Kore", style: "firm, dry tone" },
+  empatico: { voice: "Puck", style: "warm, encouraging tone" },
+  distratto: { voice: "Charon", style: "absent-minded, distracted tone" },
   presidente: {
     voice: "Orus",
-    style: "tono solenne e autorevole",
+    style: "solemn, authoritative tone",
   },
 } as const;
 const MOODS = {
   neutral: "",
-  stern: ", insoddisfatto e incalzante",
-  pleased: ", con approvazione",
+  stern: ", dissatisfied and pressing",
+  pleased: ", approving",
 } as const;
 
 const speakInput = z.object({
@@ -49,7 +49,7 @@ export const speakLine = createServerFn({ method: "POST" })
     }
   });
 
-/** Durata massima di una risposta a voce: 90 secondi di WAV mono a 16 kHz, in base64. */
+/** Maximum length of a spoken answer: 90 seconds of 16 kHz mono WAV, in base64. */
 export const MAX_ANSWER_SECONDS = 90;
 const MAX_WAV_BASE64 = Math.ceil(((MAX_ANSWER_SECONDS * 16000 * 2 + 44) * 4) / 3) + 16;
 

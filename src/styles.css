@@ -82,9 +82,9 @@
 
 :root {
   /*
-   * Palette "Oral Exam Quest": fondo quasi bianco, contorni blu notte, pochi colori piatti.
-   * Le varianti -ink sono le stesse tinte scurite quanto basta per reggere come testo o come
-   * fondo di testo bianco (contrasto di almeno 4.5:1); le tinte piene restano per i disegni.
+   * "Oral Exam Quest" palette: near-white background, midnight-blue outlines, a few flat colours.
+   * The -ink variants are the same hues darkened just enough to work as text or as a background
+   * for white text (contrast of at least 4.5:1); the full hues are kept for the drawings.
    */
   --ink: oklch(0.23 0.045 285); /* #1a192e */
   --paper: oklch(0.994 0 0); /* #fdfdfd */
@@ -134,10 +134,10 @@
 }
 
 /*
- * Stile "Oral Exam Quest": fogli bianchi con contorno blu notte e ombra netta, titoli in font
- * a pixel, testo lungo e campi in un font normale per la leggibilità. Regole seguite ovunque:
- * colori piatti senza sfumature, bersagli di tocco di almeno 44px, fuoco da tastiera sempre
- * visibile, nessun movimento se il sistema chiede di ridurlo.
+ * "Oral Exam Quest" style: white sheets with a midnight-blue outline and a hard shadow, titles
+ * in a pixel font, long text and fields in a regular font for readability. Rules followed
+ * everywhere: flat colours with no gradients, touch targets of at least 44px, keyboard focus
+ * always visible, no motion if the system asks to reduce it.
  */
 @layer base {
   * {
@@ -159,7 +159,7 @@
     background-color: var(--background);
   }
 
-  /* Foglio: contorno netto e ombra piena spostata in basso a destra. --pb colora il contorno. */
+  /* Sheet: sharp outline and solid shadow offset down and right. --pb colours the outline. */
   .panel {
     --pb: var(--ink);
     background: var(--card);
@@ -181,7 +181,7 @@
     transform: translate(3px, 3px);
     box-shadow: 2px 2px 0 0 var(--ink);
   }
-  /* Bordo sinistro di stato (esito, punti carenti): resta spesso anche dentro .panel. */
+  /* Left status border (outcome, weak points): stays thick inside .panel too. */
   .panel.border-l-4 {
     border-left-width: 10px;
   }
@@ -215,7 +215,7 @@
   .btn-ghost:hover {
     transform: translate(-2px, -2px);
   }
-  /* Pressione: il pulsante scende sulla propria ombra. */
+  /* Press: the button drops onto its own shadow. */
   .btn-main:active,
   .btn-ghost:active {
     transform: translate(3px, 3px);
@@ -228,7 +228,7 @@
     opacity: 0.4;
   }
 
-  /* Voci di navigazione: area di tocco piena, pagina corrente sottolineata. */
+  /* Navigation items: full touch area, current page underlined. */
   .nav-link {
     display: inline-flex;
     align-items: center;
@@ -247,7 +247,7 @@
     box-shadow: inset 0 -4px 0 0 var(--red-ink);
   }
 
-  /* ── Cornice dell'app ─────────────────────────────────────────────────────────────────── */
+  /* ── App frame ─────────────────────────────────────────────────────────────────── */
   .topbar {
     position: sticky;
     top: 0;
@@ -255,7 +255,7 @@
     background: var(--card);
     border-bottom: 4px solid var(--ink);
   }
-  /* Schede: in basso su telefono (a portata di pollice), colonna a sinistra su schermi larghi. */
+  /* Tabs: at the bottom on phones (within thumb reach), left column on wide screens. */
   .tabbar {
     position: fixed;
     inset: auto 0 0 0;
@@ -374,7 +374,7 @@
   .icon-btn:disabled {
     opacity: 0.3;
   }
-  /* Scorciatoia discreta per saltare un passo della simulazione. */
+  /* Discreet shortcut to skip a step of the simulation. */
   .skip-btn {
     min-height: 44px;
     padding: 0 0.5rem;
@@ -390,7 +390,7 @@
     opacity: 0.4;
   }
 
-  /* Avanzamento a segmenti: passi della configurazione e argomenti della seduta. */
+  /* Segmented progress: onboarding steps and session topics. */
   .step-seg {
     flex: 1;
     height: 12px;
@@ -405,7 +405,7 @@
     background: var(--quest-yellow);
   }
 
-  /* ── Configurazione iniziale ──────────────────────────────────────────────────────────── */
+  /* ── Onboarding ──────────────────────────────────────────────────────────── */
   .scene {
     border: 3px solid var(--ink);
     background: color-mix(in oklab, var(--quest-blue) 10%, var(--card));
@@ -465,7 +465,7 @@
     font-size: 0.875rem;
   }
 
-  /* ── Schede ───────────────────────────────────────────────────────────────────────────── */
+  /* ── Tabs ───────────────────────────────────────────────────────────────────────────── */
   .pill {
     display: inline-flex;
     align-items: center;
@@ -538,7 +538,7 @@
     line-height: 1;
   }
 
-  /* Profilo: foglio dal basso su telefono, pannello a destra su schermi larghi. */
+  /* Profile: bottom sheet on phones, right-hand panel on wide screens. */
   .sheet-backdrop {
     position: fixed;
     inset: 0;
@@ -573,7 +573,7 @@
     }
   }
 
-  /* ── Esito di una risposta e di una seduta ────────────────────────────────────────────── */
+  /* ── Outcome of an answer and of a session ────────────────────────────────────────────── */
   .result-sheet {
     margin-top: 1rem;
     padding: 1rem;
@@ -609,7 +609,7 @@
     color: var(--red-ink);
   }
 
-  /* ── Movimento: brevi, a scatti come un gioco a pixel. Spento con "riduci movimento". ──── */
+  /* ── Motion: short and snappy like a pixel game. Off with "reduce motion". ──── */
   .meter-grow {
     transition: width 0.45s steps(8);
   }
@@ -622,8 +622,39 @@
   .anim-float {
     animation: float 2.4s steps(6) infinite alternate;
   }
+  .anim-beat {
+    animation: beat 0.9s steps(4) infinite;
+  }
 
-  /* Selettore Testo / Voce: due tasti affiancati, quello attivo è pieno. */
+  /* Splash: heart and logo centred on the whole screen, safe areas included. */
+  .splash {
+    display: flex;
+    min-height: 100dvh;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: max(1.5rem, env(safe-area-inset-top)) 1.5rem max(1.5rem, env(safe-area-inset-bottom));
+  }
+  .splash-dots {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 2rem;
+  }
+  .splash-dots span {
+    width: 0.75rem;
+    height: 0.75rem;
+    background: var(--ink);
+    animation: hop 0.9s steps(3) infinite;
+  }
+  .splash-dots span:nth-child(2) {
+    background: var(--quest-red);
+    animation-delay: 0.15s;
+  }
+  .splash-dots span:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+
+  /* Text / Voice switch: two buttons side by side, the active one is filled. */
   .mode-tab {
     min-height: 44px;
     padding: 0 0.75rem;
@@ -643,7 +674,7 @@
     color: var(--paper);
   }
 
-  /* Campi: testo a 16px in font normale. */
+  /* Fields: 16px text in a regular font. */
   .field {
     width: 100%;
     min-height: 44px;
@@ -663,7 +694,7 @@
     opacity: 0.5;
   }
 
-  /* Barre: contorno blu notte, riempimento piatto. Il colore si sceglie con --fill. */
+  /* Bars: midnight-blue outline, flat fill. The colour is chosen with --fill. */
   .meter {
     --fill: var(--quest-green);
     height: 14px;
@@ -678,7 +709,7 @@
     height: 12px;
   }
 
-  /* Battute del dialogo. */
+  /* Dialogue lines. */
   .bubble {
     border: 3px solid var(--ink);
     background: var(--card);
@@ -689,7 +720,7 @@
   .bubble-me {
     background: color-mix(in oklab, var(--quest-blue) 12%, white);
   }
-  /* Riquadro di dialogo: ritratto a sinistra, battuta a destra. */
+  /* Dialogue box: portrait on the left, line on the right. */
   .dialog-box {
     display: flex;
     gap: 0.875rem;
@@ -714,7 +745,7 @@
     background: var(--ink);
   }
 
-  /* Percorso: fila di piastrelle su cui poggiano porte e studente. */
+  /* Path: row of tiles that doors and student stand on. */
   .quest-tiles {
     height: 22px;
     border-top: 3px solid var(--ink);
@@ -745,7 +776,7 @@
     text-transform: uppercase;
   }
 
-  /* Titolo: "QUEST" rosso con l'ombra blu notte sfalsata, come nel logo. */
+  /* Title: red "QUEST" with an offset midnight-blue shadow, as in the logo. */
   .quest-logo {
     font-family: var(--font-display);
     line-height: 0.85;
@@ -759,7 +790,7 @@
     text-shadow: 0.06em 0.06em 0 var(--ink);
   }
 
-  /* Tratteggio rosso dello scarto tra quanto dichiarato e quanto dimostrato. */
+  /* Red hatching for the gap between what was declared and what was proven. */
   .meter > div.gap-hatch {
     background: repeating-linear-gradient(90deg, var(--quest-red) 0 4px, var(--card) 4px 7px);
   }
@@ -774,8 +805,8 @@
   }
 }
 
-/* Le animazioni muovono soltanto: non partono mai da trasparente, così il contenuto resta
-   leggibile anche se il browser non le fa avanzare (scheda in secondo piano, risparmio energia). */
+/* Animations only move things: they never start from transparent, so content stays readable
+   even if the browser does not advance them (background tab, power saving). */
 @keyframes slide-up {
   from {
     transform: translateY(18px);
@@ -792,5 +823,22 @@
 @keyframes float {
   to {
     transform: translateY(-8px);
+  }
+}
+@keyframes beat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.14);
+  }
+  50% {
+    transform: scale(0.98);
+  }
+}
+@keyframes hop {
+  50% {
+    transform: translateY(-6px);
   }
 }

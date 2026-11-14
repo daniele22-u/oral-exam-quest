@@ -14,16 +14,16 @@ import {
 } from "./engine";
 import { TOPICS } from "./data";
 const s = (t: number) => ({ accuracy: t, completeness: t, logic: t, total: t });
-describe("regole", () => {
-  it("Senza Rete triplica i crediti su risposta buona", () => {
+describe("rules", () => {
+  it("No Safety Net triples credits on a good answer", () => {
     expect(creditDelta(s(8), "senzarete")).toBe(24);
     expect(creditDelta(s(8), "prudente")).toBe(8);
   });
-  it("Senza Rete penalizza duramente, la lacuna poco", () => {
+  it("No Safety Net penalises hard, a declared gap only a little", () => {
     expect(creditDelta(s(3), "senzarete")).toBe(-20);
     expect(creditDelta(s(0), "lacuna")).toBe(-2);
   });
-  it("il Presidente ripropone lacune e punteggi peggiori", () => {
+  it("the President brings back gaps and worst scores", () => {
     const q = (id: string, total: number, conf: QuestionRecord["confidence"] = "solido") => ({
       topicId: id,
       topicTitle: id,
@@ -58,36 +58,38 @@ describe("regole", () => {
     model: "",
     examiner: "",
   });
-  it("le parole chiave di una lettera valgono solo come parola a sé", () => {
+  it("one-letter keywords only count as a word of their own", () => {
     const hh = TOPICS.find((t) => t.id === "ne-hh")!;
-    // "m", "h", "n" compaiono dentro quasi ogni parola: un testo fuori tema non deve centrarle.
-    expect(keywordCoverage(["Non ho nulla da dichiarare in merito, mi dispiace."], hh).hit).toBe(0);
+    // "m", "h", "n" appear inside nearly every word: off-topic text must not hit them.
+    expect(keywordCoverage(["I have nothing to say about this, I am sorry."], hh).hit).toBe(0);
     expect(
-      keywordCoverage(["Le variabili m, h e n regolano le conduttanze di sodio e potassio."], hh)
-        .hit,
+      keywordCoverage(
+        ["The variables m, h and n control the sodium and potassium conductances."],
+        hh,
+      ).hit,
     ).toBe(6);
   });
-  it("una risposta pertinente e argomentata batte una fuori tema", () => {
+  it("a relevant, reasoned answer beats an off-topic one", () => {
     const ny = TOPICS.find((t) => t.id === "sp-nyquist")!;
     const good = scoreAnswers(
       [
-        "La frequenza di campionamento deve essere almeno il doppio della banda del segnale, perché altrimenti le repliche spettrali si sovrappongono e si ha aliasing; quindi si usa un filtro anti-aliasing prima della ricostruzione.",
+        "The sampling frequency must be at least twice the bandwidth of the signal, because otherwise the spectral replicas overlap and you get aliasing; therefore an anti-aliasing filter is used before reconstruction.",
       ],
       ny,
     );
-    const bad = scoreAnswers(["Non saprei dire."], ny);
+    const bad = scoreAnswers(["I could not say."], ny);
     expect(good.total).toBeGreaterThanOrEqual(6);
     expect(bad.total).toBeLessThan(6);
     expect(good.accuracy).toBeGreaterThan(bad.accuracy);
   });
-  it("la calibrazione premia chi dichiara ciò che poi rende, lacune comprese", () => {
+  it("calibration rewards declaring what you then deliver, gaps included", () => {
     expect(calibration([q("a", 8.5, "senzarete"), q("b", 0, "lacuna")])).toBe(100);
     expect(calibration([q("a", 2, "senzarete")])).toBeLessThan(
       calibration([q("a", 2, "prudente")]),
     );
     expect(calibration([])).toBe(0);
   });
-  it("il voto resta tra 18 e 30 e lode", () => {
+  it("the grade stays between 18 and 30 cum laude", () => {
     const sess = (total: number, conf: QuestionRecord["confidence"]): SessionRecord[] => [
       {
         id: "1",
@@ -99,31 +101,31 @@ describe("regole", () => {
       },
     ];
     expect(finalGrade(sess(0, "senzarete")).grade).toBe("18/30");
-    expect(finalGrade(sess(10, "senzarete")).grade).toBe("30 e lode");
+    expect(finalGrade(sess(10, "senzarete")).grade).toBe("30 cum laude");
     expect(finalGrade([]).grade).toBe("18/30");
   });
-  it("le sigle corte non si trovano dentro altre parole", () => {
+  it("short acronyms are not found inside other words", () => {
     const eeg = TOPICS.find((t) => t.id === "ne-eeg")!;
-    // "tipica" e "tecnica" contengono "ica" ma non parlano di ICA.
-    expect(missedConcepts(["La tecnica tipica."], eeg)).toContain("ICA");
-    expect(missedConcepts(["Uso la ICA."], eeg)).not.toContain("ICA");
+    // "typical" and "technical" contain "ica" but are not about ICA.
+    expect(missedConcepts(["The typical technical one."], eeg)).toContain("ICA");
+    expect(missedConcepts(["I use ICA."], eeg)).not.toContain("ICA");
     const fft = TOPICS.find((t) => t.id === "sp-fft")!;
-    expect(missedConcepts(["Costa N log N invece di n^2."], fft)).not.toEqual(
-      expect.arrayContaining(["costo O(N log N)", "costo O(N²)"]),
+    expect(missedConcepts(["It costs N log N instead of n^2."], fft)).not.toEqual(
+      expect.arrayContaining(["O(N log N) cost", "O(N²) cost"]),
     );
   });
-  it("il referto elenca i punti carenti ricavati dalle risposte", () => {
+  it("the report lists weak points derived from the answers", () => {
     const bad = {
       ...q("a", 2, "senzarete"),
-      topicTitle: "Filtri",
-      model: "Modello.",
-      missed: ["stabilità"],
+      topicTitle: "Filters",
+      model: "Model.",
+      missed: ["stability"],
     };
     const gap = { ...q("b", 0, "lacuna"), topicTitle: "Zeta" };
     const good = { ...q("c", 9, "solido"), topicTitle: "FFT" };
-    expect(diagnose(bad).join(" ")).toMatch(/Sicurezza sopravvalutata/);
+    expect(diagnose(bad).join(" ")).toMatch(/Overconfident/);
     expect(diagnose(good)).toEqual([]);
-    expect(diagnose({ ...q("d", 9, "prudente") }).join(" ")).toMatch(/sottovalutata/);
+    expect(diagnose({ ...q("d", 9, "prudente") }).join(" ")).toMatch(/Underconfident/);
     const md = sessionReportMarkdown(
       {
         id: "1",
@@ -133,14 +135,14 @@ describe("regole", () => {
         passed: false,
         questions: [bad, gap, good],
       },
-      "Seduta 1",
+      "Session 1",
       "14/11/2026",
     );
-    const weak = md.slice(md.indexOf("## Punti carenti"), md.indexOf("## Dettaglio"));
-    expect(weak).toContain("### Filtri");
-    expect(weak).toContain("Concetti non toccati: stabilità.");
+    const weak = md.slice(md.indexOf("## Weak points"), md.indexOf("## Question details"));
+    expect(weak).toContain("### Filters");
+    expect(weak).toContain("Concepts not covered: stability.");
     expect(weak).toContain("### Zeta");
     expect(weak).not.toContain("### FFT");
-    expect(md).toContain("non convalidata con 12 crediti");
+    expect(md).toContain("not passed with 12 credits");
   });
 });

@@ -10,9 +10,9 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { loadEnv } from "vite";
 
-// Sviluppo locale: rende disponibili alle funzioni server i segreti di .env.local (ignorato da
-// git). Finiscono solo in process.env del server, mai nel bundle del browser. In produzione il
-// valore arriva dai Secrets di Lovable e .env.local non esiste.
+// Local development: makes the secrets in .env.local (git-ignored) available to server
+// functions. They only end up in the server's process.env, never in the browser bundle. In
+// production the value comes from Lovable Secrets and .env.local does not exist.
 for (const [k, v] of Object.entries(loadEnv("development", process.cwd(), "GEMINI_")))
   process.env[k] ??= v;
 

@@ -1,9 +1,9 @@
 import type { ExaminerId } from "@/lib/game/data";
 
 /**
- * Ritratti a pixel degli esaminatori nello stile "Oral Exam Quest": figure 16×16 a colori piatti
- * con contorno blu notte, disegnate qui come griglie (nessuna immagine esterna). Ogni personaggio
- * ha una griglia di base e piccole variazioni per i tre stati d'animo.
+ * Pixel portraits of the examiners in the "Oral Exam Quest" style: 16×16 flat-colour figures
+ * with a midnight-blue outline, drawn here as grids (no external images). Each character has
+ * a base grid and small variations for the three moods.
  */
 export type Mood = "neutral" | "stern" | "pleased";
 export type Who = ExaminerId | "presidente";
@@ -11,31 +11,31 @@ export type Who = ExaminerId | "presidente";
 const SIZE = 16;
 
 const PALETTE: Record<string, string> = {
-  k: "#1a192e", // contorno blu notte
+  k: "#1a192e", // midnight-blue outline
   w: "#ffffff",
-  p: "#694ad7", // viola del ciclope
+  p: "#694ad7", // cyclops purple
   b: "#386ee0",
   r: "#e03a49",
   y: "#f4b73a",
-  g: "#a6abb9", // capelli e barba grigi
-  s: "#f0c89f", // pelle
+  g: "#a6abb9", // grey hair and beard
+  s: "#f0c89f", // skin
   l: "#dbe0e7",
-  n: "#2b2a4a", // giacca
+  n: "#2b2a4a", // jacket
 };
 
 type Patch = readonly (readonly [number, number, string])[];
 
 interface Character {
   base: string[];
-  /** Pixel da sovrascrivere per ogni stato d'animo: [x, y, colore]. */
+  /** Pixels to overwrite for each mood: [x, y, colour]. */
   moods: Record<Mood, Patch>;
 }
 
-/** Riga orizzontale di pixel dello stesso colore. */
+/** Horizontal run of same-colour pixels. */
 const run = (y: number, from: number, to: number, ch: string): Patch =>
   Array.from({ length: to - from + 1 }, (_, i) => [from + i, y, ch] as const);
 
-// Sguardo stretto dietro gli occhiali: la palpebra copre la metà alta di ogni lente.
+// Narrowed gaze behind the glasses: the eyelid covers the top half of each lens.
 const SQUINT: Patch = [
   [5, 7, "k"],
   [6, 7, "k"],
@@ -44,7 +44,7 @@ const SQUINT: Patch = [
 ];
 
 const CAST: Record<Who, Character> = {
-  // Severa: il ciclope viola. La pupilla si accende di rosso quando incalza.
+  // Strict: the purple cyclops. The pupil turns red when pressing.
   severo: {
     base: [
       "................",
@@ -69,12 +69,12 @@ const CAST: Record<Who, Character> = {
       stern: [
         [7, 8, "r"],
         [8, 8, "r"],
-        // Palpebra abbassata.
+        // Lowered eyelid.
         ...run(5, 5, 10, "p"),
         [4, 6, "p"],
         [11, 6, "p"],
       ],
-      // Occhio che sorride: la pupilla diventa un arco.
+      // Smiling eye: the pupil becomes an arc.
       pleased: [
         ...run(7, 6, 9, "w"),
         [7, 7, "k"],
@@ -86,7 +86,7 @@ const CAST: Record<Who, Character> = {
       ],
     },
   },
-  // Empatico: il robot dal viso tondo, con antenna.
+  // Supportive: the round-faced robot, with antenna.
   empatico: {
     base: [
       ".......bb.......",
@@ -108,7 +108,7 @@ const CAST: Record<Who, Character> = {
     ],
     moods: {
       neutral: [],
-      // Sopracciglia inclinate e bocca all'ingiù.
+      // Slanted eyebrows and downturned mouth.
       stern: [
         [4, 4, "k"],
         [5, 5, "k"],
@@ -119,7 +119,7 @@ const CAST: Record<Who, Character> = {
         [5, 10, "k"],
         [10, 10, "k"],
       ],
-      // Sorriso e guance rosse.
+      // Smile and red cheeks.
       pleased: [
         ...run(9, 6, 9, "w"),
         [5, 9, "k"],
@@ -130,7 +130,7 @@ const CAST: Record<Who, Character> = {
       ],
     },
   },
-  // Distratto: il professore dai capelli grigi con occhialoni e baffi.
+  // Absent-minded: the grey-haired professor with big glasses and a moustache.
   distratto: {
     base: [
       ".....kkkkkk.....",
@@ -152,12 +152,12 @@ const CAST: Record<Who, Character> = {
     ],
     moods: {
       neutral: [],
-      // Sguardo stretto e baffi che scendono.
+      // Narrowed gaze and drooping moustache.
       stern: [...SQUINT, [4, 11, "k"], [11, 11, "k"]],
       pleased: run(11, 6, 9, "r"),
     },
   },
-  // Presidente: il re con corona, occhiali, barba grigia e manto rosso.
+  // President: the king with crown, glasses, grey beard and red cloak.
   presidente: {
     base: [
       "..k...kkkk...k..",
@@ -179,7 +179,7 @@ const CAST: Record<Who, Character> = {
     ],
     moods: {
       neutral: [],
-      // Sguardo stretto e bocca serrata nella barba.
+      // Narrowed gaze and tight mouth in the beard.
       stern: [...SQUINT, ...run(10, 6, 9, "k")],
       pleased: run(10, 6, 9, "r"),
     },
@@ -197,9 +197,9 @@ function build(who: Who, mood: Mood): string[][] {
 }
 
 const MOOD_LABEL: Record<Mood, string> = {
-  neutral: "espressione neutra",
-  stern: "espressione severa",
-  pleased: "espressione soddisfatta",
+  neutral: "neutral expression",
+  stern: "stern expression",
+  pleased: "pleased expression",
 };
 
 export function Portrait({

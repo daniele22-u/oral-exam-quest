@@ -1,9 +1,9 @@
 import type { Topic } from "./data";
 
 /**
- * Materiali del corso così come arriverebbero dalla piattaforma didattica: per ogni lezione una
- * registrazione, la sua trascrizione e, a volte, appunti e audio. Qui sono simulati a partire
- * dagli argomenti del programma: nessun file viene scaricato davvero.
+ * Course materials as they would arrive from the learning platform: for each lecture a
+ * recording, its transcript and, sometimes, notes and audio. Here they are simulated from the
+ * syllabus topics: no file is actually downloaded.
  */
 export type SourceKind = "video" | "audio" | "appunti" | "trascrizione";
 
@@ -20,10 +20,10 @@ export interface Lesson {
 }
 
 export const SOURCE_LABEL: Record<SourceKind, string> = {
-  video: "Registrazione",
+  video: "Recording",
   audio: "Audio",
-  appunti: "Appunti",
-  trascrizione: "Trascrizione",
+  appunti: "Notes",
+  trascrizione: "Transcript",
 };
 
 const slug = (s: string) =>
@@ -40,21 +40,21 @@ export function lessonsFor(topics: Topic[]): Lesson[] {
     const nn = String(n).padStart(2, "0");
     const minutes = 70 + ((i * 17) % 35);
     const sources: Source[] = [
-      { kind: "video", name: `Lezione_${nn}_${slug(t.title)}.mp4`, detail: `${minutes} min` },
+      { kind: "video", name: `Lecture_${nn}_${slug(t.title)}.mp4`, detail: `${minutes} min` },
       {
         kind: "trascrizione",
-        name: `Lezione_${nn}_trascrizione.txt`,
-        detail: `${minutes * 130} parole`,
+        name: `Lecture_${nn}_transcript.txt`,
+        detail: `${minutes * 130} words`,
       },
     ];
     if (i % 2 === 0)
       sources.push({
         kind: "appunti",
-        name: `Appunti_${nn}.pdf`,
-        detail: `${6 + ((i * 5) % 9)} pagine`,
+        name: `Notes_${nn}.pdf`,
+        detail: `${6 + ((i * 5) % 9)} pages`,
       });
     if (i % 3 === 1)
-      sources.push({ kind: "audio", name: `Ricevimento_${nn}.mp3`, detail: `${18 + i * 3} min` });
+      sources.push({ kind: "audio", name: `Office_hours_${nn}.mp3`, detail: `${18 + i * 3} min` });
     return { topicId: t.id, n, title: t.title, sources };
   });
 }

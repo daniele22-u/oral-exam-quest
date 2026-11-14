@@ -1,60 +1,60 @@
-# Oral Exam Quest — "Commissione"
+# Oral Exam Quest
 
-Simulatore gamificato di esame orale universitario: un serious game accademico in cui non basta sapere, bisogna sapere _quanto_ si sa.
+A gamified simulator of the university oral exam: an academic serious game where knowing is not enough, you have to know _how much_ you know.
 
-## Esperienza d'uso
+## Experience
 
-- **Configurazione iniziale**: un passo per schermata. Si "collegano" i Servizi Online del Politecnico e WeBeep, si sceglie il corso e l'app mostra lezioni, registrazioni, trascrizioni e appunti che diventano argomenti d'esame. **È una simulazione**: non vengono chieste credenziali e non parte alcuna richiesta verso quei servizi; ogni passo si può saltare ("Salta · demo").
-- **Tre schede**: Percorso, Materiali, Fascicolo. Su telefono stanno in una barra in basso, su schermi larghi in una colonna a sinistra. Il profilo è in alto a destra (servizi collegati, Testo/Voce, azzeramento).
-- **Seduta a tutto schermo**: durante l'esame spariscono schede e profilo; restano avanzamento, crediti e la ✕ per abbandonare.
-- Linee guida seguite: aree di tocco di almeno 44 px, testo dei campi a 16 px, stato mai affidato al solo colore, rispetto di "riduci movimento" e delle aree sicure dei telefoni.
+- **Splash and onboarding**: the app opens on the beating pixel heart, then one step per screen. You "connect" the Politecnico Online Services and WeBeep, pick a course, and the app shows the lectures, recordings, transcripts and notes that become exam topics. **It is a simulation**: no credentials are asked for and no request is sent to those services; every step can be skipped ("Skip · demo").
+- **Three tabs**: Path, Materials, Record. On phones they sit in a bottom bar, on wide screens in a left column. The profile is top right (connected services, Text/Voice, reset).
+- **Full-screen session**: during the exam tabs and profile disappear; only progress, credits and the ✕ to leave remain.
+- Guidelines followed: touch targets of at least 44 px, 16 px field text, state never conveyed by colour alone, "reduce motion" and phone safe areas respected.
 
-## Come si gioca
+## How to play
 
-1. **Scegli il programma**: Signal Processing, Neuroengineering o una materia personalizzata (nome del corso + almeno 3 argomenti).
-2. **Sedute preliminari**: ogni seduta estrae a sorte un esaminatore (Severa, Empatico, Distratto) e 3 argomenti. Si parte da 30 Crediti Fiducia; la seduta è convalidata con almeno 40.
-3. **Dichiarazione di sicurezza** prima di ogni domanda:
+1. **Choose the syllabus**: Signal Processing, Neuroengineering or a custom course (course name + at least 3 topics).
+2. **Preliminary sessions**: each session draws a random examiner (Strict, Supportive, Absent-Minded) and 3 topics. You start with 30 Trust Credits; the session is passed with at least 40.
+3. **Confidence declaration** before every question:
 
-   | Dichiarazione | Crediti se sufficiente | Penalità | Approfondimenti                          |
-   | ------------- | ---------------------- | -------- | ---------------------------------------- |
-   | Prudente      | ×1                     | −4       | 2                                        |
-   | Solido        | ×2                     | −10      | 3                                        |
-   | Senza Rete    | ×3                     | −20      | 4                                        |
-   | Lacuna        | —                      | −2       | nessuno (debito formativo nel fascicolo) |
+   | Declaration   | Credits if sufficient | Penalty | Follow-ups                              |
+   | ------------- | --------------------- | ------- | --------------------------------------- |
+   | Cautious      | ×1                    | −4      | 2                                       |
+   | Solid         | ×2                    | −10     | 3                                       |
+   | No Safety Net | ×3                    | −20     | 4                                       |
+   | Gap           | —                     | −2      | none (learning debt kept in the record) |
 
-4. **Commissione Plenaria**: dopo 3 sedute convalidate il Presidente ripropone gli argomenti peggiori di _tutto_ lo storico, sedute fallite comprese, e ricorda perché. Qui non è ammesso dichiarare una lacuna: si risponde a ogni domanda.
-5. **Verbale**: voto in trentesimi, indice di calibrazione della sicurezza, debiti formativi ancora aperti e cronologia espandibile con trascrizione, punteggi e spiegazione modello.
+4. **Plenary Board**: after 3 passed sessions the President brings back the worst topics from the _whole_ history, failed sessions included, and reminds you why. Declaring a gap is not allowed here: you answer every question.
+5. **Report**: grade out of 30, confidence calibration index, learning debts still open and an expandable history with transcript, scores and model answer.
 
-Il fascicolo e la seduta in corso sono salvati nel browser (`localStorage`): ricaricando la pagina si riprende da dove si era rimasti.
+The record and the session in progress are saved in the browser (`localStorage`): reloading the page resumes where you left off.
 
-## Valutazione
+## Scoring
 
-La modalità demo funziona senza chiavi API. Il punteggio (0–10) combina accuratezza (concetti chiave del programma toccati, 50%), completezza (ampiezza della risposta, 25%) e tenuta logica (connettivi argomentativi, 25%); la sufficienza è 6. È un'euristica a parole chiave, non una correzione di merito: `scoreAnswers` in `src/lib/game/engine.ts` è il punto in cui agganciare un valutatore AI.
+Demo mode works without API keys. The score (0–10) combines accuracy (key syllabus concepts covered, 50%), completeness (breadth of the answer, 25%) and logic (argumentative connectives, 25%); the pass mark is 6. It is a keyword heuristic, not a real assessment: `scoreAnswers` in `src/lib/game/engine.ts` is where an AI evaluator plugs in.
 
-## Esaminatore AI (facoltativo)
+## AI examiner (optional)
 
-Con una chiave Google Gemini le domande d'apertura, gli approfondimenti e la valutazione finale sono generati in tempo reale: l'esaminatore reagisce a ciò che lo studente ha detto e il referto riporta un giudizio scritto. Senza chiave, o se il servizio non risponde, il gioco ripiega da solo sulla modalità demo.
+With a Google Gemini key the opening questions, the follow-ups and the final evaluation are generated in real time: the examiner reacts to what the student said and the report includes a written assessment. Without a key, or if the service does not answer, the game falls back to demo mode on its own.
 
-- In locale: file `.env.local` (ignorato da git) con `GEMINI_API_KEY=...`.
-- Su Lovable: stesso nome nei Secrets del progetto.
-- Facoltativi: `GEMINI_MODEL` (predefinito `gemini-flash-lite-latest`, scelto perché risponde in circa un secondo) e `GEMINI_EVAL_MODEL` per usare un modello più capace solo nel giudizio finale.
+- Locally: a `.env.local` file (git-ignored) with `GEMINI_API_KEY=...`.
+- On Lovable: the same name in the project Secrets.
+- Optional: `GEMINI_MODEL` (default `gemini-flash-lite-latest`, chosen because it answers in about a second) and `GEMINI_EVAL_MODEL` to use a more capable model for the final assessment only.
 
-La chiave resta sul server (`src/lib/game/server/gemini.ts`): non usare mai il prefisso `VITE_`, che la esporrebbe al browser. Le funzioni server in `src/lib/game/ai.ts` sono raggiungibili da chiunque apra il sito e non hanno limite di frequenza: prima di pubblicare, impostare un tetto di spesa sulla chiave.
+The key stays on the server (`src/lib/game/server/gemini.ts`): never use the `VITE_` prefix, which would expose it to the browser. The server functions in `src/lib/game/ai.ts` are reachable by anyone who opens the site and have no rate limit: set a spending cap on the key before publishing.
 
-### Variante vocale (Testo / Voce)
+### Voice variant (Text / Voice)
 
-Con la chiave configurata compare in alto il selettore **Testo / Voce**. In modalità Voce l'esaminatore legge ogni battuta e si può rispondere al microfono: la registrazione viene trascritta nel campo di risposta, da rileggere prima di inviare. Tutto passa dalla stessa chiave Gemini, lato server.
+With the key configured, the profile shows the **Text / Voice** switch. In Voice mode the examiner reads every line aloud and you can answer by microphone: the recording is transcribed into the answer field, to reread before sending. Everything goes through the same Gemini key, server-side.
 
-- Voce: `gemini-3.8-flash-lite-tts`, con ripiego su `gemini-3.8-flash-tts` (`GEMINI_TTS_MODEL` per cambiarlo).
-- Ascolto: `gemini-3.5-transcribe` (`GEMINI_STT_MODEL` per cambiarlo).
-- Il piano gratuito concede poche richieste al minuto ai modelli vocali: se la voce non è disponibile l'esame prosegue per iscritto.
-- L'audio dello studente viene inviato a Google solo per la trascrizione e non è salvato dall'app; risposte fino a 90 secondi.
+- Speech: `gemini-3.8-flash-lite-tts`, falling back to `gemini-3.8-flash-tts` and older TTS models (`GEMINI_TTS_MODEL` to change it).
+- Listening: `gemini-3.5-transcribe` (`GEMINI_STT_MODEL` to change it).
+- The free tier gives voice models only a few requests per minute: if voice is unavailable the exam continues in writing.
+- The student's audio is sent to Google only for transcription and is not stored by the app; answers up to 90 seconds.
 
-## Struttura
+## Structure
 
-- `src/lib/game/data.ts` — esaminatori, livelli di sicurezza, argomenti e domande.
-- `src/lib/game/engine.ts` — regole come funzioni pure (punteggio, crediti, calibrazione, voto, scelta degli argomenti del Presidente), con test in `engine.test.ts`.
-- `src/components/game/Game.tsx` — interfaccia e flusso di gioco.
+- `src/lib/game/data.ts` — examiners, confidence levels, topics and questions.
+- `src/lib/game/engine.ts` — rules as pure functions (score, credits, calibration, grade, the President's topic selection), with tests in `engine.test.ts`.
+- `src/components/game/Game.tsx` — interface and game flow.
 
 This project was built with [Lovable](https://lovable.dev).
 
@@ -75,6 +75,6 @@ git clone <this-repository-url>
 cd <repository-name>
 npm i
 npm run dev
-npm test        # test delle regole di gioco
+npm test        # game rule tests
 npm run lint
 ```

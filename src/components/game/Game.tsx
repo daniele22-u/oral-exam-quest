@@ -46,11 +46,11 @@ import { Student } from "./QuestMap";
 
 type Phase = "onboarding" | "hub" | "materials" | "session" | "debrief" | "report";
 
-/** "Seduta N" contando le sole preliminari, oppure "Commissione Plenaria". */
+/** "Session N" counting preliminary sessions only, or "Plenary Board". */
 function sessionTitle(sessions: SessionRecord[], s: SessionRecord): string {
-  if (s.examiner === "presidente") return "Commissione Plenaria";
+  if (s.examiner === "presidente") return "Plenary Board";
   const n = sessions.filter((x) => x.examiner !== "presidente").findIndex((x) => x.id === s.id);
-  return `Seduta ${n + 1}`;
+  return `Session ${n + 1}`;
 }
 interface Live {
   examiner: Examiner | null;
@@ -79,19 +79,19 @@ function customTopics(course: string, list: string): Topic[] {
       id: `cu-${i}-${t}`,
       course,
       title: t,
-      question: `Mi illustri l'argomento "${t}": definizione, principi fondamentali e un esempio applicativo.`,
+      question: `Walk me through "${t}": definition, fundamental principles and an applied example.`,
       keywords: t
         .toLowerCase()
         .split(/\s+/)
         .filter((w) => w.length > 3)
-        .concat(["defin", "esempio", "applica", "principio"]),
+        .concat(["defin", "example", "applic", "principle"]),
       followUps: [
-        `Quali sono i limiti principali di ${t}?`,
-        `Come collegherebbe ${t} ad altri argomenti del corso?`,
-        "Mi faccia un controesempio.",
-        "Quale ipotesi è cruciale in quello che ha detto?",
+        `What are the main limits of ${t}?`,
+        `How would you connect ${t} to other topics in the course?`,
+        "Give me a counterexample.",
+        "Which assumption is crucial in what you said?",
       ],
-      model: `Una risposta modello su "${t}" dovrebbe includere una definizione rigorosa, i principi su cui si fonda, almeno un esempio applicativo e i limiti di validità. (Modalità demo: collegando Lovable AI la spiegazione viene generata sul programma reale.)`,
+      model: `A model answer on "${t}" should include a rigorous definition, the principles it rests on, at least one applied example and its limits of validity. (Demo mode: with the AI examiner enabled the explanation is generated from the actual exchange.)`,
     }));
 }
 
@@ -103,12 +103,19 @@ export default function Game() {
   const [live, setLive] = useState<Live | null>(null);
   const [lastOutcome, setLastOutcome] = useState<SessionRecord | null>(null);
 
-  // Variante vocale (l'esaminatore parla, lo studente risponde al microfono): richiede l'AI.
+  // Voice variant (the examiner speaks, the student answers by microphone): requires the AI.
   const [voicePref, setVoicePref] = useState(false);
-  // Configurazione iniziale: servizi collegati (per finta) e se è già stata conclusa.
+  // Onboarding: (simulated) connected services and whether it has been completed.
   const [profile, setProfile] = useState<Profile>({ polimi: false, webeep: false, done: false });
   const [sheet, setSheet] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  // Splash: shown from the first paint until the record is read and a short minimum has passed.
+  const [splash, setSplash] = useState(true);
+  useEffect(() => {
+    const quick = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const id = window.setTimeout(() => setSplash(false), quick ? 400 : 1500);
+    return () => window.clearTimeout(id);
+  }, []);
 
   useEffect(() => {
     try {
@@ -126,18 +133,18 @@ export default function Game() {
           webeep: s.profile?.webeep === true,
           done,
         });
-        // Una seduta interrotta (ricarica, chiusura della scheda) riprende da dove era rimasta.
+        // An interrupted session (reload, closed tab) resumes where it left off.
         if (s.live?.topics?.[s.live.idx] && Array.isArray(s.live.records)) {
           setLive(s.live);
           setPhase("session");
         } else if (done) setPhase("hub");
       }
     } catch {
-      /* fascicolo illeggibile: si riparte da zero */
+      /* unreadable record: start from scratch */
     }
     setHydrated(true);
   }, []);
-  // Si salva solo dopo la lettura iniziale, per non sovrascrivere il fascicolo con lo stato vuoto.
+  // Save only after the initial read, so the record is not overwritten with the empty state.
   useEffect(() => {
     if (!hydrated) return;
     try {
@@ -146,14 +153,14 @@ export default function Game() {
         JSON.stringify({ sessions, course, custom, live, voice: voicePref, profile }),
       );
     } catch {
-      /* storage pieno o negato */
+      /* storage full or denied */
     }
   }, [hydrated, sessions, course, custom, live, voicePref, profile]);
 
   const pool = useMemo(
     () =>
       course === "custom"
-        ? customTopics(custom.name || "Materia personalizzata", custom.topics)
+        ? customTopics(custom.name || "Custom course", custom.topics)
         : TOPICS.filter((t) => t.course === course),
     [course, custom],
   );
@@ -166,12 +173,12 @@ export default function Game() {
       })),
     [],
   );
-  const courseTitle = course === "custom" ? custom.name || "Materia a mano" : course;
+  const courseTitle = course === "custom" ? custom.name || "Custom course" : course;
   const prelim = sessions.filter((s) => s.examiner !== "presidente");
   const passed = prelim.filter((s) => s.passed);
   const boss = sessions.find((s) => s.examiner === "presidente" && s.passed);
   const [debriefId, setDebriefId] = useState<string | null>(null);
-  // Esaminatore AI disponibile solo se il server ha una chiave: altrimenti modalità demo.
+  // AI examiner available only if the server has a key: otherwise demo mode.
   const [ai, setAi] = useState(false);
   const voice = ai && voicePref;
   useEffect(() => {
@@ -180,7 +187,7 @@ export default function Game() {
       .catch(() => setAi(false));
   }, []);
   const debrief = sessions.find((s) => s.id === debriefId);
-  // Cambiare schermata riporta in alto, come aprire una pagina nuova.
+  // Changing screen scrolls back to the top, like opening a new page.
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [phase]);
@@ -196,8 +203,8 @@ export default function Game() {
       weak.forEach((w) => {
         notes[w.topicId] =
           w.confidence === "lacuna"
-            ? `Leggo nel fascicolo che con ${w.examiner} ha dichiarato una lacuna su "${w.topicTitle}". Un debito formativo si salda qui, oggi.`
-            : `So bene che con ${w.examiner} ha tentennato su "${w.topicTitle}" (${w.score.total}/10). Le do l'occasione di riscattarsi.`;
+            ? `I read in your record that with ${w.examiner} you declared a gap on "${w.topicTitle}". A learning debt is settled here, today.`
+            : `I know full well that with ${w.examiner} you wavered on "${w.topicTitle}" (${w.score.total}/10). I am giving you the chance to redeem yourself.`;
       });
       if (topics.length < 3)
         topics = [...topics, ...shuffle(pool.filter((t) => !topics.includes(t)))].slice(0, 3);
@@ -236,16 +243,16 @@ export default function Game() {
     setPhase("debrief");
   }
 
-  /** Uscire da una seduta in corso la annulla: lo si chiede prima. */
+  /** Leaving a session in progress discards it: ask first. */
   function leaveTo(target: Phase) {
     if (phase === "session" && live) {
-      if (!confirm("Abbandonare la seduta in corso? Non verrà registrata nel fascicolo.")) return;
+      if (!confirm("Leave the session in progress? It will not be saved to your record.")) return;
       setLive(null);
     }
     setPhase(target);
   }
 
-  if (!hydrated) return <div className="min-h-dvh academy-bg" />;
+  if (!hydrated || splash) return <Splash />;
 
   if (phase === "onboarding")
     return (
@@ -264,7 +271,7 @@ export default function Game() {
       </div>
     );
 
-  // Durante la seduta spariscono schede e profilo: resta solo l'esame.
+  // During a session tabs and profile disappear: only the exam remains.
   if (phase === "session" && live)
     return (
       <div className="min-h-dvh academy-bg text-foreground">
@@ -326,8 +333,8 @@ export default function Game() {
               }
               nextLabel={
                 debrief.examiner === "presidente" && debrief.passed
-                  ? "Leggi il verbale finale"
-                  : "Torna al percorso"
+                  ? "Read the final report"
+                  : "Back to the path"
               }
             />
           )}
@@ -355,7 +362,7 @@ export default function Game() {
             setPhase("onboarding");
           }}
           onReset={() => {
-            if (confirm("Cancellare il fascicolo e ricominciare?")) {
+            if (confirm("Delete your record and start over?")) {
               setSessions([]);
               setLastOutcome(null);
               setSheet(false);
@@ -364,6 +371,33 @@ export default function Game() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+/** Opening screen: the beating pixel heart and the logo while the app gets ready. */
+function Splash() {
+  return (
+    <div
+      role="status"
+      aria-label="Loading Oral Exam Quest"
+      className="splash academy-bg text-foreground"
+    >
+      <div className="anim-beat">
+        <Heart size={132} />
+      </div>
+      <div className="quest-logo anim-slide mt-6 text-center text-6xl md:text-8xl">
+        Oral Exam
+        <em>Quest</em>
+      </div>
+      <p className="mt-5 font-display text-2xl leading-none text-muted-foreground">
+        Know how much you know.
+      </p>
+      <div className="splash-dots" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+      </div>
     </div>
   );
 }
@@ -384,9 +418,9 @@ function Hub({
   boss: boolean;
   last: SessionRecord | null;
   course: string;
-  /** Nessuna seduta ancora sostenuta: si mostra come funziona. */
+  /** No session taken yet: show how it works. */
   first: boolean;
-  /** Il programma ha abbastanza argomenti per estrarre una seduta. */
+  /** The syllabus has enough topics to draw a session. */
   ready: boolean;
   onSession: () => void;
   onBoss: () => void;
@@ -397,22 +431,22 @@ function Hub({
   const numerals = ["I", "II", "III", "IV", "V"];
   const next = boss
     ? {
-        title: "Esame superato",
-        text: "Il verbale finale è nel fascicolo.",
-        cta: "Leggi il verbale",
+        title: "Exam passed",
+        text: "The final report is in your record.",
+        cta: "Read the report",
         go: onReport,
       }
     : unlocked
       ? {
-          title: "Commissione Plenaria",
-          text: "Il Presidente ripropone i tuoi punti deboli. Nessun rinvio: si risponde a tutto.",
-          cta: "Presentati al Presidente",
+          title: "Plenary Board",
+          text: "The President brings back your weak points. No passing: you answer everything.",
+          cta: "Face the President",
           go: onBoss,
         }
       : {
-          title: `Seduta ${numerals[passed] ?? passed + 1}`,
-          text: "Un esaminatore estratto a sorte e tre argomenti dal tuo programma.",
-          cta: first ? "Inizia la prima seduta" : "Inizia la seduta",
+          title: `Session ${numerals[passed] ?? passed + 1}`,
+          text: "A randomly drawn examiner and three topics from your syllabus.",
+          cta: first ? "Start your first session" : "Start the session",
           go: onSession,
         };
   return (
@@ -425,12 +459,11 @@ function Hub({
           {last.passed && <Icon name="check" size={32} />}
           <div>
             <div className="font-display text-2xl leading-none">
-              {last.passed ? "Seduta convalidata" : "Seduta non convalidata"} · {last.credits}{" "}
-              crediti
+              {last.passed ? "Session passed" : "Session not passed"} · {last.credits} credits
             </div>
             <div className="text-sm text-muted-foreground">
               {last.examinerName}
-              {last.passed ? "" : " · gli argomenti critici restano nel fascicolo, puoi riprovare"}
+              {last.passed ? "" : " · the weak topics stay in your record, you can try again"}
             </div>
           </div>
         </div>
@@ -438,7 +471,7 @@ function Hub({
 
       <div className="panel hero-card">
         <div className="min-w-0">
-          <button className="pill" onClick={onMaterials} aria-label={`Corso: ${course}. Cambia`}>
+          <button className="pill" onClick={onMaterials} aria-label={`Course: ${course}. Change`}>
             <Icon name="book" size={18} />
             {course}
           </button>
@@ -447,15 +480,15 @@ function Hub({
           {!boss && (
             <ul className="mt-4 flex flex-wrap gap-2 text-sm">
               <li className="fact">
-                <Icon name="book" size={18} />3 argomenti
+                <Icon name="book" size={18} />3 topics
               </li>
               <li className="fact">
                 <Heart size={16} />
-                {START_CREDITS} crediti, ne servono {PASS_THRESHOLD}
+                {START_CREDITS} credits, {PASS_THRESHOLD} to pass
               </li>
               <li className="fact">
                 <Icon name="bubble" size={18} />
-                circa 10 minuti
+                about 10 minutes
               </li>
             </ul>
           )}
@@ -465,7 +498,7 @@ function Hub({
             </button>
           ) : (
             <button className="btn-ghost mt-6 w-full md:w-auto" onClick={onMaterials}>
-              Aggiungi almeno 3 argomenti
+              Add at least 3 topics
             </button>
           )}
         </div>
@@ -477,7 +510,7 @@ function Hub({
         </div>
       </div>
 
-      <h3 className="mt-8 font-display text-3xl leading-none">Il percorso</h3>
+      <h3 className="mt-8 font-display text-3xl leading-none">Your path</h3>
       <div className="mt-3">
         <QuestMap
           required={REQUIRED_SESSIONS}
@@ -489,22 +522,24 @@ function Hub({
 
       {first && (
         <>
-          <h3 className="mt-8 font-display text-3xl leading-none">Come funziona</h3>
+          <h3 className="mt-8 font-display text-3xl leading-none">How it works</h3>
           <ol className="mt-3 grid gap-3 md:grid-cols-3">
             <li className="panel how-card">
               <Coins n={3} />
-              <b>Punta sulla tua sicurezza</b>
-              <span>Più monete rischi, più crediti vinci. O perdi.</span>
+              <b>Bet on your confidence</b>
+              <span>The more coins you risk, the more credits you win. Or lose.</span>
             </li>
             <li className="panel how-card">
               <Icon name="bubble" size={36} />
-              <b>Rispondi all'esaminatore</b>
-              <span>Ti incalza con domande di approfondimento.</span>
+              <b>Answer the examiner</b>
+              <span>They press you with follow-up questions.</span>
             </li>
             <li className="panel how-card">
               <Icon name="crown" size={36} />
-              <b>Affronta il Presidente</b>
-              <span>Dopo {REQUIRED_SESSIONS} sedute, torna sui tuoi punti deboli.</span>
+              <b>Face the President</b>
+              <span>
+                After {REQUIRED_SESSIONS} sessions, the President returns to your weak points.
+              </span>
             </li>
           </ol>
         </>
@@ -512,7 +547,7 @@ function Hub({
 
       {unlocked && !boss && ready && (
         <button className="btn-ghost mt-8 w-full md:w-auto" onClick={onSession}>
-          Seduta di allenamento
+          Practice session
         </button>
       )}
     </section>
@@ -530,18 +565,18 @@ function Session({
   live: Live;
   setLive: (l: Live) => void;
   onEnd: (l: Live) => void;
-  /** Abbandona la seduta (chiede conferma). */
+  /** Leave the session (asks for confirmation). */
   onQuit: () => void;
   ai: boolean;
-  /** Variante vocale: l'esaminatore parla e si può rispondere al microfono. */
+  /** Voice variant: the examiner speaks and the student can answer by microphone. */
   voice: boolean;
 }) {
   const [input, setInput] = useState("");
-  // In attesa dell'esaminatore AI: la risposta appena inviata resta visibile ma non è ancora
-  // salvata, così una ricarica a metà attesa non lascia la seduta in uno stato incompleto.
+  // Waiting for the AI examiner: the answer just sent stays visible but is not saved yet,
+  // so a reload mid-wait does not leave the session in an incomplete state.
   const [busy, setBusy] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
-  // Espressione del ritratto e battuta appena pronunciata (l'unica che compare a macchina da scrivere).
+  // Portrait expression and the line just spoken (the only one shown with the typewriter effect).
   const [mood, setMood] = useState<Mood>("neutral");
   const [fresh, setFresh] = useState<string | null>(null);
   const mounted = useRef(true);
@@ -551,7 +586,7 @@ function Session({
       mounted.current = false;
     };
   }, []);
-  // Dopo un'attesa la seduta può essere stata abbandonata: in quel caso non va ripristinata.
+  // After a wait the session may have been abandoned: in that case it must not be restored.
   const setLive = (l: Live) => {
     if (mounted.current) commit(l);
   };
@@ -564,7 +599,7 @@ function Session({
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [live.transcript.length, pending, busy]);
 
-  /** Battuta dell'esaminatore AI, oppure il testo predefinito se l'AI non è disponibile. */
+  /** The AI examiner's line, or the preset text if the AI is unavailable. */
   async function profLine(
     kind: "open" | "followup",
     conf: Confidence,
@@ -591,7 +626,9 @@ function Session({
           transcript,
           baseQuestion: topic.question,
           examinerName: profName,
-          examinerTrait: ex ? ex.trait : "Autorevole, severo ma giusto; conosce il fascicolo.",
+          examinerTrait: ex
+            ? ex.trait
+            : "Authoritative, strict but fair; knows the student's record.",
           isBoss: live.isBoss,
           ...(note ? { bossNote: note } : {}),
           confidence: conf,
@@ -605,7 +642,7 @@ function Session({
   }
 
   async function declare(conf: Confidence | "lacuna") {
-    // In Plenaria non ci si può sottrarre: la lacuna si dichiara solo nelle sedute preliminari.
+    // No way out in front of the Plenary Board: a gap can only be declared in preliminary sessions.
     if (conf === "lacuna" && live.isBoss) return;
     if (conf === "lacuna") {
       setMood("neutral");
@@ -613,12 +650,12 @@ function Session({
       const score = { accuracy: 0, completeness: 0, logic: 0, total: 0 };
       const t: Turn[] = [
         { role: "prof", text: topic.question },
-        { role: "student", text: "Dichiaro una lacuna su questo argomento." },
+        { role: "student", text: "I declare a gap on this topic." },
         {
           role: "prof",
           text: live.isBoss
-            ? "Le riconosco l'onestà, ma era il momento di saldare il debito. Annoto."
-            : "Prendo atto. Lo registro come debito formativo nel suo fascicolo.",
+            ? "I appreciate the honesty, but this was the moment to settle the debt. Noted."
+            : "Noted. I am recording it as a learning debt in your record.",
         },
       ];
       const rec: QuestionRecord = {
@@ -643,15 +680,15 @@ function Session({
       return;
     }
     const intro = live.isBoss
-      ? (live.bossNotes[topic.id] || "Vediamo questo argomento.") + " "
+      ? (live.bossNotes[topic.id] || "Let us look at this topic.") + " "
       : pick(ex!.open) + " ";
     const pressure =
       conf === "senzarete"
         ? live.isBoss
-          ? " E visto che si dichiara senza rete, non le concederò nulla."
+          ? " And since you declare yourself without a safety net, I will concede nothing."
           : " " + pick(ex!.doubt)
         : "";
-    setBusy("L'esaminatore formula la domanda…");
+    setBusy("The examiner is preparing the question…");
     const opening = await profLine(
       "open",
       conf,
@@ -661,7 +698,7 @@ function Session({
       conf === "senzarete" ? "stern" : "neutral",
     );
     setBusy(null);
-    // Gli approfondimenti vengono estratti a sorte: rigiocare lo stesso argomento non ripete la stessa sequenza.
+    // Follow-ups are drawn at random: replaying the same topic does not repeat the same sequence.
     setLive({
       ...live,
       conf,
@@ -683,9 +720,9 @@ function Session({
       t.push({
         role: "prof",
         text: pick([
-          "Protestare non le restituisce i punti persi. Il fascicolo parla chiaro: risponda.",
-          "Giovanotto, la commissione non ripete gli argomenti per crudeltà ma per giustizia. Prosegua.",
-          "Lo prendo come un segno di nervosismo. Torniamo al merito, prego.",
+          "Protesting will not give you back the points you lost. The record is clear: answer.",
+          "The board does not revisit topics out of cruelty but out of fairness. Go on.",
+          "I will take that as a sign of nerves. Back to the substance, please.",
         ]),
       });
       setMood("stern");
@@ -699,13 +736,13 @@ function Session({
       const partial = scoreAnswers([text], topic).accuracy;
       const prefix = live.isBoss
         ? partial >= 5
-          ? "Meglio di allora. Ma:"
-          : "Mi aspettavo di più, considerato il precedente. Allora:"
+          ? "Better than last time. But:"
+          : "I expected more, given the precedent. So:"
         : partial >= 5
           ? pick(ex!.praise) + " " + (live.conf === "senzarete" ? pick(ex!.doubt) : "")
           : pick(ex!.push);
       setPending(text);
-      setBusy(`${profName} sta valutando la risposta…`);
+      setBusy(`${profName} is weighing your answer…`);
       const line = await profLine(
         "followup",
         conf,
@@ -720,7 +757,7 @@ function Session({
       setLive({ ...live, transcript: t, answers, asked: live.asked + 1 });
       return;
     }
-    // Valutazione finale: AI sulla trascrizione intera, con ripiego sulle parole chiave.
+    // Final evaluation: AI on the whole transcript, falling back to keywords.
     let score = scoreAnswers(answers, topic);
     let verdict: Pick<QuestionRecord, "coverage" | "missed" | "feedback" | "ai" | "model"> = {
       coverage: keywordCoverage(answers, topic),
@@ -729,7 +766,7 @@ function Session({
     };
     if (ai) {
       setPending(text);
-      setBusy("La commissione delibera…");
+      setBusy("The board is deliberating…");
       try {
         const r = await evaluateAnswers({
           data: { course: topic.course, topicTitle: topic.title, transcript: t },
@@ -744,7 +781,7 @@ function Session({
           };
         }
       } catch {
-        /* resta la valutazione a parole chiave */
+        /* keep the keyword-based evaluation */
       }
       setBusy(null);
       setPending(null);
@@ -755,8 +792,8 @@ function Session({
       role: "prof",
       text:
         score.total >= 6
-          ? "Va bene. Possiamo considerare l'argomento superato."
-          : "Non è sufficiente. Annoto le lacune emerse.",
+          ? "Good. We can consider this topic passed."
+          : "That is not sufficient. I am noting the gaps that emerged.",
     });
     setFresh(t[t.length - 1]!.text);
     const rec: QuestionRecord = {
@@ -798,15 +835,15 @@ function Session({
   const last = live.records[live.records.length - 1];
   const who: Who = live.isBoss ? "presidente" : ex!.id;
   const lastProf = live.transcript.map((m) => m.role).lastIndexOf("prof");
-  // Voce: ogni nuova battuta dell'esaminatore viene letta; passando a "Testo" si interrompe.
+  // Voice: every new examiner line is read aloud; switching to "Text" stops it.
   const { speak, stop, state: speech, failed: mute } = useSpeaker();
   useEffect(() => {
     if (voice && fresh) void speak(fresh, who, mood);
     else stop();
-    // Solo una nuova battuta o il cambio di modalità devono far ripartire la voce.
+    // Only a new line or a mode change should restart the voice.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fresh, voice]);
-  // Battito: sale con la puntata dichiarata, con il Presidente e quando i crediti scendono.
+  // Heartbeat: rises with the declared stake, with the President and when credits drop.
   const stake = live.conf && live.conf !== "lacuna" ? CONFIDENCE[live.conf].mult * 18 : 0;
   const bpm = Math.min(
     180,
@@ -820,12 +857,12 @@ function Session({
   return (
     <div className="mx-auto max-w-5xl px-4 pb-6 pt-3 md:px-6">
       <div className="flex items-center gap-3">
-        <button className="icon-btn" onClick={onQuit} aria-label="Abbandona la seduta">
+        <button className="icon-btn" onClick={onQuit} aria-label="Leave the session">
           ✕
         </button>
         <ol
           className="flex flex-1 gap-1.5"
-          aria-label={`Argomento ${live.idx + 1} di ${live.topics.length}`}
+          aria-label={`Topic ${live.idx + 1} of ${live.topics.length}`}
         >
           {live.topics.map((t, i) => (
             <li
@@ -842,7 +879,7 @@ function Session({
         </ol>
         <span className="stat-chip">
           <Heart size={18} />
-          <span className="sr-only">Crediti Fiducia:</span>
+          <span className="sr-only">Trust Credits:</span>
           {live.credits}
         </span>
       </div>
@@ -859,13 +896,13 @@ function Session({
               <div className="eyebrow text-pop">{live.isBoss ? PRESIDENT.title : ex!.title}</div>
               <div className="font-display text-2xl leading-none md:mt-1">{profName}</div>
               <p className="mt-2 hidden text-sm text-muted-foreground md:block">
-                {live.isBoss ? "Ha davanti a sé il suo fascicolo completo." : ex!.trait}
+                {live.isBoss ? "Has your complete record on the desk." : ex!.trait}
               </p>
             </div>
           </div>
           <div className="mt-3 md:mt-6 md:border-t-2 md:border-ink/15 md:pt-4">
             <div className="hidden md:block">
-              <div className="eyebrow text-muted-foreground">Crediti Fiducia</div>
+              <div className="eyebrow text-muted-foreground">Trust Credits</div>
               <div className="font-display text-6xl leading-none">{live.credits}</div>
             </div>
             <div
@@ -889,11 +926,11 @@ function Session({
               />
             </div>
             <div className="mt-1 text-xs text-muted-foreground">
-              {live.credits} crediti · soglia di convalida {PASS_THRESHOLD}
+              {live.credits} credits · {PASS_THRESHOLD} to pass
             </div>
           </div>
           <div className="mt-3 md:mt-4 md:border-t-2 md:border-ink/15 md:pt-4">
-            <div className="mb-1 hidden eyebrow text-muted-foreground md:block">Tensione</div>
+            <div className="mb-1 hidden eyebrow text-muted-foreground md:block">Tension</div>
             <Pulse bpm={bpm} />
           </div>
         </aside>
@@ -910,8 +947,7 @@ function Session({
                 </p>
               )}
               <p className="text-muted-foreground">
-                Prima di ascoltare la domanda, dichiari il suo livello di sicurezza su questo
-                argomento.
+                Before hearing the question, declare how confident you are on this topic.
               </p>
               <div className="mt-5 grid gap-3 md:grid-cols-3">
                 {(Object.keys(CONFIDENCE) as Confidence[]).map((c) => (
@@ -929,16 +965,16 @@ function Session({
                     </div>
                     <div className="mt-1 text-xs text-muted-foreground">{CONFIDENCE[c].desc}</div>
                     <div className="mt-3 text-xs">
-                      ×{CONFIDENCE[c].mult} crediti · −{CONFIDENCE[c].penalty} se insufficiente ·{" "}
-                      {CONFIDENCE[c].followUps} follow-up
+                      ×{CONFIDENCE[c].mult} credits · −{CONFIDENCE[c].penalty} if insufficient ·{" "}
+                      {CONFIDENCE[c].followUps} follow-ups
                     </div>
                   </button>
                 ))}
               </div>
               {live.isBoss ? (
                 <p className="mt-4 text-sm text-muted-foreground">
-                  Davanti al Presidente non è ammesso il rinvio a giudizio: deve rispondere a ogni
-                  domanda.
+                  In front of the President there is no passing on a topic: you must answer every
+                  question.
                 </p>
               ) : (
                 <button
@@ -946,7 +982,7 @@ function Session({
                   disabled={!!busy}
                   className="btn-ghost mt-4 w-full disabled:pointer-events-none disabled:opacity-50"
                 >
-                  Rinvio a giudizio · dichiaro una lacuna (−2 crediti)
+                  Pass on this topic · declare a gap (−2 credits)
                 </button>
               )}
               {busy && (
@@ -962,7 +998,7 @@ function Session({
               <div className="mt-4 flex-1 space-y-3 overflow-y-auto pr-1">
                 {live.transcript.map((m, i) =>
                   i === lastProf ? (
-                    // La battuta corrente dell'esaminatore: riquadro di dialogo con ritratto.
+                    // The examiner's current line: dialogue box with portrait.
                     <div key={i} className="dialog-box">
                       <Portrait who={who} mood={mood} name={profName} size={72} />
                       <div className="min-w-0 flex-1">
@@ -977,16 +1013,16 @@ function Session({
                             }
                           >
                             {speech === "loading"
-                              ? "Preparo la voce…"
+                              ? "Preparing the voice…"
                               : speech === "playing"
-                                ? "■ Ferma la voce"
-                                : "▶ Riascolta"}
+                                ? "■ Stop the voice"
+                                : "▶ Listen again"}
                           </button>
                         )}
                         {voice && mute && (
                           <p role="status" className="text-sm text-destructive">
-                            Voce non disponibile ora (limite del servizio raggiunto): prosegua
-                            leggendo, oppure riprovi tra poco.
+                            Voice unavailable right now (service limit reached): carry on reading,
+                            or try again shortly.
                           </p>
                         )}
                       </div>
@@ -997,7 +1033,7 @@ function Session({
                       className={`bubble max-w-[85%] ${m.role === "prof" ? "" : "bubble-me ml-auto"}`}
                     >
                       <div className="mb-1 eyebrow text-muted-foreground">
-                        {m.role === "prof" ? profName : "Studente"}
+                        {m.role === "prof" ? profName : "Student"}
                       </div>
                       {m.text}
                     </div>
@@ -1005,7 +1041,7 @@ function Session({
                 )}
                 {pending && (
                   <div className="bubble bubble-me ml-auto max-w-[85%]">
-                    <div className="mb-1 eyebrow text-muted-foreground">Studente</div>
+                    <div className="mb-1 eyebrow text-muted-foreground">Student</div>
                     {pending}
                   </div>
                 )}
@@ -1015,20 +1051,18 @@ function Session({
               {live.step === "dialog" && (
                 <div className="mt-4">
                   <div className="mb-2 text-xs text-muted-foreground">
-                    Sicurezza: {CONFIDENCE[live.conf as Confidence].label} · approfondimento{" "}
-                    {live.asked}/{maxFU}
+                    Confidence: {CONFIDENCE[live.conf as Confidence].label} · follow-up {live.asked}
+                    /{maxFU}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <textarea
                       autoFocus
-                      aria-label="La tua risposta"
+                      aria-label="Your answer"
                       disabled={!!busy}
                       className="field min-h-20 min-w-48 flex-1"
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
-                      placeholder={
-                        voice ? "Parli o scriva la risposta…" : "Risponda all'esaminatore…"
-                      }
+                      placeholder={voice ? "Speak or type your answer…" : "Answer the examiner…"}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && !e.shiftKey) {
                           e.preventDefault();
@@ -1049,11 +1083,11 @@ function Session({
                       disabled={!input.trim() || !!busy}
                       onClick={send}
                     >
-                      Rispondi
+                      Answer
                     </button>
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground">
-                    Invio per rispondere · Maiusc+Invio per andare a capo
+                    Enter to answer · Shift+Enter for a new line
                   </div>
                 </div>
               )}
@@ -1064,10 +1098,10 @@ function Session({
                   <div className="mb-3 flex items-center gap-2 font-display text-4xl leading-none">
                     {last.score.total >= 6 && <Icon name="check" size={32} />}
                     {last.confidence === "lacuna"
-                      ? "Lacuna dichiarata"
+                      ? "Gap declared"
                       : last.score.total >= 6
-                        ? "Risposta sufficiente"
-                        : "Risposta insufficiente"}
+                        ? "Sufficient answer"
+                        : "Insufficient answer"}
                   </div>
                   <div className="flex flex-wrap items-end gap-6">
                     <ScoreBars s={last.score} />
@@ -1079,22 +1113,18 @@ function Session({
                       {last.delta}
                     </div>
                     <button className="btn-main w-full md:ml-auto md:w-auto" onClick={next}>
-                      {live.idx + 1 >= live.topics.length
-                        ? "Chiudi la seduta"
-                        : "Prossimo argomento"}
+                      {live.idx + 1 >= live.topics.length ? "Close the session" : "Next topic"}
                     </button>
                   </div>
                   <Coverage q={last} />
                   {last.feedback && (
                     <div className="mt-3 border-2 border-ink p-4 text-sm">
-                      <div className="eyebrow text-pop">Giudizio dell'esaminatore</div>
+                      <div className="eyebrow text-pop">Examiner's assessment</div>
                       <p className="mt-1 leading-relaxed">{last.feedback}</p>
                     </div>
                   )}
                   <details className="mt-3 rounded-md bg-secondary p-4 text-sm">
-                    <summary className="cursor-pointer eyebrow text-pop">
-                      Spiegazione modello
-                    </summary>
+                    <summary className="cursor-pointer eyebrow text-pop">Model answer</summary>
                     <p className="mt-2 leading-relaxed">{last.model}</p>
                   </details>
                 </div>
@@ -1112,9 +1142,9 @@ function ScoreBars({ s }: { s: QuestionRecord["score"] }) {
     <div className="grid min-w-56 gap-1 text-xs">
       {(
         [
-          ["Accuratezza", s.accuracy],
-          ["Completezza", s.completeness],
-          ["Tenuta logica", s.logic],
+          ["Accuracy", s.accuracy],
+          ["Completeness", s.completeness],
+          ["Logic", s.logic],
         ] as const
       ).map(([l, v]) => (
         <div key={l} className="flex items-center gap-2">
@@ -1125,15 +1155,15 @@ function ScoreBars({ s }: { s: QuestionRecord["score"] }) {
           <span className="w-6 text-right">{v}</span>
         </div>
       ))}
-      <div className="mt-1 font-semibold">Totale {s.total}/10</div>
+      <div className="mt-1 font-semibold">Total {s.total}/10</div>
     </div>
   );
 }
 
 /**
- * Testo che compare un carattere alla volta, come nei dialoghi dei giochi di ruolo. Un tocco lo
- * completa subito; con "riduci movimento" attivo compare intero. Chi usa uno screen reader riceve
- * sempre la frase completa, non i frammenti.
+ * Text that appears one character at a time, as in role-playing game dialogue. A tap completes
+ * it at once; with "reduce motion" on it appears whole. Screen reader users always get the
+ * full sentence, not the fragments.
  */
 function Typewriter({ text }: { text: string }) {
   const [n, setN] = useState(0);
@@ -1176,9 +1206,9 @@ function Coverage({ q }: { q: QuestionRecord }) {
   if (!q.coverage || q.confidence === "lacuna") return null;
   return (
     <p className="mt-3 text-xs text-muted-foreground">
-      Concetti chiave del programma toccati:{" "}
+      Key syllabus concepts covered:{" "}
       <b className="text-foreground">
-        {q.coverage.hit} su {q.coverage.total}
+        {q.coverage.hit} of {q.coverage.total}
       </b>
     </p>
   );
@@ -1193,7 +1223,7 @@ function download(name: string, text: string) {
   URL.revokeObjectURL(url);
 }
 
-/** Referto di fine seduta: punti carenti ricavati dalle risposte date, scaricabile. */
+/** End-of-session report: weak points derived from the answers given, downloadable. */
 function Debrief({
   session: s,
   title,
@@ -1210,8 +1240,8 @@ function Debrief({
   const date = new Date(s.date ?? Date.now());
   const save = () =>
     download(
-      `referto-${title.toLowerCase().replace(/\s+/g, "-")}-${date.toISOString().slice(0, 10)}.md`,
-      sessionReportMarkdown(s, title, date.toLocaleDateString("it-IT")),
+      `report-${title.toLowerCase().replace(/\s+/g, "-")}-${date.toISOString().slice(0, 10)}.md`,
+      sessionReportMarkdown(s, title, date.toLocaleDateString("en-GB")),
     );
   return (
     <section className="anim-slide">
@@ -1228,24 +1258,18 @@ function Debrief({
           <div className="eyebrow text-muted-foreground">
             {title} · {s.examinerName}
           </div>
-          <h2 className="stamp anim-pop mt-1">{s.passed ? "Convalidata" : "Non convalidata"}</h2>
+          <h2 className="stamp anim-pop mt-1">{s.passed ? "Passed" : "Not passed"}</h2>
         </div>
       </div>
       <div className="mt-6 grid gap-4 md:grid-cols-3">
-        <Stat
-          label="Argomenti sufficienti"
-          value={`${strong.length} / ${s.questions.length}`}
-          big
-        />
-        <Stat label="Crediti Fiducia" value={`${s.credits} / ${PASS_THRESHOLD}`} />
-        <Stat label="Calibrazione sicurezza" value={`${calibration(s.questions)}%`} />
+        <Stat label="Sufficient topics" value={`${strong.length} / ${s.questions.length}`} big />
+        <Stat label="Trust Credits" value={`${s.credits} / ${PASS_THRESHOLD}`} />
+        <Stat label="Confidence calibration" value={`${calibration(s.questions)}%`} />
       </div>
 
-      <h3 className="mt-10 font-display text-3xl leading-none">Punti carenti</h3>
+      <h3 className="mt-10 font-display text-3xl leading-none">Weak points</h3>
       {weak.length === 0 && (
-        <p className="mt-3 text-muted-foreground">
-          Nessun punto carente rilevato in questa seduta.
-        </p>
+        <p className="mt-3 text-muted-foreground">No weak points found in this session.</p>
       )}
       <div className="mt-4 space-y-4">
         {weak.map((q, i) => (
@@ -1253,8 +1277,8 @@ function Debrief({
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <div className="font-display text-2xl leading-none">{q.topicTitle}</div>
               <div className="text-sm text-muted-foreground">
-                {q.confidence === "lacuna" ? "Lacuna riconosciuta" : CONFIDENCE[q.confidence].label}{" "}
-                · {q.score.total}/10
+                {q.confidence === "lacuna" ? "Gap declared" : CONFIDENCE[q.confidence].label} ·{" "}
+                {q.score.total}/10
               </div>
             </div>
             <div className="mt-4">
@@ -1273,7 +1297,7 @@ function Debrief({
             {q.missed && q.missed.length > 0 && (
               <div className="mt-4">
                 <div className="eyebrow text-muted-foreground">
-                  {q.ai ? "Concetti mancanti o sbagliati" : "Concetti che non ha toccato"}
+                  {q.ai ? "Missing or wrong concepts" : "Concepts you did not cover"}
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {q.missed.map((m) => (
@@ -1285,7 +1309,7 @@ function Debrief({
               </div>
             )}
             <div className="mt-4 rounded-md bg-secondary p-4 text-sm">
-              <div className="eyebrow text-pop">Cosa avrebbe dovuto dire</div>
+              <div className="eyebrow text-pop">What you should have said</div>
               <p className="mt-1 leading-relaxed">{q.model}</p>
             </div>
           </div>
@@ -1294,7 +1318,7 @@ function Debrief({
 
       {strong.length > 0 && (
         <>
-          <h3 className="mt-10 font-display text-3xl leading-none">Argomenti solidi</h3>
+          <h3 className="mt-10 font-display text-3xl leading-none">Solid topics</h3>
           <ul className="mt-3 space-y-1 text-sm">
             {strong.map((q, i) => (
               <li key={i}>
@@ -1309,7 +1333,7 @@ function Debrief({
       <p className="mt-8 text-xs text-muted-foreground">{reportDisclaimer(s)}</p>
       <div className="mt-6 flex flex-wrap gap-3">
         <button className="btn-main" onClick={save}>
-          Scarica il referto
+          Download the report
         </button>
         <button className="btn-ghost" onClick={onNext}>
           {nextLabel}
@@ -1330,7 +1354,7 @@ function Report({
   const { grade, avg } = finalGrade(sessions);
   const cal = calibration(qs);
   const debts = qs.filter((q) => q.confidence === "lacuna");
-  // Un debito è saldato se lo stesso argomento è stato poi sostenuto con esito sufficiente.
+  // A debt is settled if the same topic was later answered with a sufficient result.
   const lastTry = new Map(qs.map((q) => [q.topicId, q]));
   const openDebts = [...new Map(debts.map((q) => [q.topicId, q])).values()].filter((q) => {
     const l = lastTry.get(q.topicId)!;
@@ -1341,29 +1365,29 @@ function Report({
   return (
     <section className="anim-slide">
       <h2 className="font-display text-5xl leading-none">
-        {final ? "Verbale d'esame" : "Fascicolo"}
+        {final ? "Final exam report" : "Record"}
       </h2>
       {!final && (
-        <p className="mt-2 text-muted-foreground">Provvisorio: si aggiorna a ogni seduta.</p>
+        <p className="mt-2 text-muted-foreground">Provisional: updated after every session.</p>
       )}
       <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-        <Stat label={final ? "Voto finale" : "Voto stimato"} value={grade} big />
-        <Stat label="Calibrazione sicurezza" value={`${cal}%`} />
-        <Stat label="Media argomenti" value={`${avg}/10`} />
-        <Stat label="Debiti formativi aperti" value={String(openDebts.length)} />
+        <Stat label={final ? "Final grade" : "Estimated grade"} value={grade} big />
+        <Stat label="Confidence calibration" value={`${cal}%`} />
+        <Stat label="Topic average" value={`${avg}/10`} />
+        <Stat label="Open learning debts" value={String(openDebts.length)} />
       </div>
       <p className="mt-3 text-sm text-muted-foreground">
-        La calibrazione misura quanto la sicurezza dichiarata ha corrisposto alla resa reale: 100%
-        significa sapere esattamente quanto si sa.
+        Calibration measures how closely your declared confidence matched your actual performance:
+        100% means knowing exactly how much you know.
       </p>
       {openDebts.length > 0 && (
         <div className="panel mt-8 border-l-4 border-l-destructive p-5">
-          <div className="eyebrow text-muted-foreground">Da ripassare</div>
+          <div className="eyebrow text-muted-foreground">To review</div>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
             {openDebts.map((q) => (
               <li key={q.topicId}>
                 <b>{q.topicTitle}</b>{" "}
-                <span className="text-muted-foreground">· lacuna dichiarata con {q.examiner}</span>
+                <span className="text-muted-foreground">· gap declared with {q.examiner}</span>
               </li>
             ))}
           </ul>
@@ -1371,10 +1395,10 @@ function Report({
       )}
       {sessions.length === 0 && (
         <p className="mt-8 text-muted-foreground">
-          Il fascicolo è ancora vuoto: sostenga la prima seduta.
+          Your record is still empty: take your first session.
         </p>
       )}
-      <h3 className="mt-10 font-display text-3xl leading-none">Cronologia</h3>
+      <h3 className="mt-10 font-display text-3xl leading-none">History</h3>
       <ol className="mt-4 space-y-6 border-l-4 border-ink/30 pl-6">
         {sessions.map((s) => (
           <li key={s.id}>
@@ -1383,13 +1407,13 @@ function Report({
               <span
                 className={`text-sm ${s.passed ? "text-[var(--green-ink)]" : "text-destructive"}`}
               >
-                ({s.passed ? "convalidata" : "non convalidata"}, {s.credits} crediti)
+                ({s.passed ? "passed" : "not passed"}, {s.credits} credits)
               </span>{" "}
               <button
                 className="eyebrow text-muted-foreground underline hover:text-pop"
                 onClick={() => onDebrief(s.id)}
               >
-                Referto
+                Report
               </button>
             </div>
             <div className="mt-2 space-y-2">
@@ -1407,7 +1431,7 @@ function Report({
                         <span className="text-xs text-muted-foreground">
                           ·{" "}
                           {q.confidence === "lacuna"
-                            ? "Lacuna riconosciuta"
+                            ? "Gap declared"
                             : CONFIDENCE[q.confidence].label}
                         </span>
                       </span>
@@ -1428,7 +1452,7 @@ function Report({
                               <span
                                 className={`eyebrow ${m.role === "prof" ? "text-pop" : "text-muted-foreground"}`}
                               >
-                                {m.role === "prof" ? q.examiner : "Studente"}
+                                {m.role === "prof" ? q.examiner : "Student"}
                               </span>
                               <br />
                               {m.text}
@@ -1436,7 +1460,7 @@ function Report({
                           ))}
                         </div>
                         <div className="rounded-md bg-secondary p-4">
-                          <div className="eyebrow text-pop">Spiegazione modello</div>
+                          <div className="eyebrow text-pop">Model answer</div>
                           <p className="mt-1">{q.model}</p>
                         </div>
                       </div>

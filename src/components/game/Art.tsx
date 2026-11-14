@@ -1,6 +1,6 @@
 /**
- * Icone e piccole illustrazioni a pixel dell'app, disegnate come griglie 12×12 (nessuna immagine
- * esterna). Sono decorative: il significato è sempre scritto accanto.
+ * The app's pixel icons and small illustrations, drawn as 12×12 grids (no external images).
+ * They are decorative: the meaning is always written next to them.
  */
 const PALETTE: Record<string, string> = {
   k: "#1a192e",

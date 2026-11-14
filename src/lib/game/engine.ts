@@ -1,7 +1,7 @@
 import { CONCEPT_LABELS, CONFIDENCE, type Confidence, type ExaminerId, type Topic } from "./data";
 
 export const START_CREDITS = 30;
-export const PASS_THRESHOLD = 40; // crediti per convalidare una seduta
+export const PASS_THRESHOLD = 40; // credits needed to pass a session
 export const REQUIRED_SESSIONS = 3;
 
 export interface Turn {
@@ -24,13 +24,13 @@ export interface QuestionRecord {
   delta: number;
   model: string;
   examiner: string;
-  /** Concetti chiave del programma toccati nella risposta (assente nei fascicoli salvati da versioni precedenti). */
+  /** Key syllabus concepts touched by the answer (missing in records saved by older versions). */
   coverage?: Coverage;
-  /** Concetti chiave non toccati, con nome leggibile (assente nei fascicoli precedenti). */
+  /** Key concepts not touched, with a readable name (missing in older records). */
   missed?: string[];
-  /** Giudizio scritto dell'esaminatore AI; assente in modalità demo. */
+  /** Written feedback from the AI examiner; missing in demo mode. */
   feedback?: string;
-  /** true se punteggio e punti carenti vengono dal valutatore AI anziché dalle parole chiave. */
+  /** true when score and weak points come from the AI evaluator rather than keywords. */
   ai?: boolean;
 }
 export interface Coverage {
@@ -44,7 +44,7 @@ export interface SessionRecord {
   credits: number;
   passed: boolean;
   questions: QuestionRecord[];
-  /** Data di chiusura in formato ISO (assente nei fascicoli precedenti). */
+  /** Closing date in ISO format (missing in older records). */
   date?: string;
 }
 
@@ -55,9 +55,9 @@ const norm = (s: string) =>
     .replace(/[\u0300-\u036f]/g, "");
 
 /**
- * Le parole chiave sono radici ("campion", "stabil") cercate come sottostringa; simboli e sigle
- * fino a 3 caratteri ("m", "z", "ica", "fir", "log") devono invece comparire come parola a sé,
- * altrimenti le conterrebbe quasi ogni testo ("tipica", "firma", "logica").
+ * Keywords are stems ("sampl", "stab") matched as substrings; symbols and acronyms of up to
+ * 3 characters ("m", "z", "ica", "fir", "log") must instead appear as a word of their own,
+ * otherwise nearly any text would contain them ("typical", "first", "logic").
  */
 function splitKeywords(text: string, keywords: string[]) {
   const tokens = new Set(text.split(/[^a-z0-9]+/).filter(Boolean));
@@ -79,20 +79,20 @@ export function keywordCoverage(answers: string[], topic: Topic): Coverage {
   };
 }
 
-/** Concetti chiave dell'argomento che le risposte non hanno toccato, con nome leggibile. */
+/** Key concepts of the topic that the answers did not touch, with a readable name. */
 export function missedConcepts(answers: string[], topic: Topic): string[] {
   return splitKeywords(norm(answers.join(" ")), topic.keywords).missed.map(
     (k) => CONCEPT_LABELS[k] ?? k,
   );
 }
 
-/** Punteggio complessivo: l'accuratezza pesa metà, completezza e logica un quarto ciascuna. */
+/** Overall score: accuracy weighs half, completeness and logic a quarter each. */
 export function withTotal(accuracy: number, completeness: number, logic: number): Score {
   const total = Math.round((accuracy * 0.5 + completeness * 0.25 + logic * 0.25) * 10) / 10;
   return { accuracy, completeness, logic, total };
 }
 
-/** Valutazione demo deterministica: parole chiave, lunghezza, connettivi logici. */
+/** Deterministic demo scoring: keywords, length, logical connectives. */
 export function scoreAnswers(answers: string[], topic: Topic): Score {
   const text = norm(answers.join(" "));
   const hits = keywordHits(text, topic.keywords);
@@ -100,7 +100,7 @@ export function scoreAnswers(answers: string[], topic: Topic): Score {
   const words = text.split(/\s+/).filter(Boolean).length;
   const completeness = Math.min(10, Math.round(words / (answers.length * 4)));
   const connectors = (
-    text.match(/\b(perche|quindi|dunque|infatti|poiche|ovvero|cioe|se|allora|mentre)\b/g) || []
+    text.match(/\b(because|therefore|thus|hence|so|since|indeed|if|then|while|whereas)\b/g) || []
   ).length;
   const logic = Math.min(10, 3 + connectors * 2 + (words > 20 ? 1 : 0));
   return withTotal(accuracy, completeness, logic);
@@ -118,13 +118,13 @@ const EXPECTED: Record<Confidence | "lacuna", number> = {
   senzarete: 8.5,
   lacuna: 0,
 };
-/** Resa (0-10) che una dichiarazione di sicurezza lascia attendere. */
+/** Score (0-10) that a stated confidence leads one to expect. */
 export const expectedScore = (conf: Confidence | "lacuna") => EXPECTED[conf];
 
-/** Indice di calibrazione 0-100: quanto la sicurezza dichiarata corrisponde alla resa. */
+/** Calibration index 0-100: how well stated confidence matches performance. */
 export function calibration(qs: QuestionRecord[]): number {
   if (!qs.length) return 0;
-  // Una lacuna dichiarata è una previsione esatta della propria resa (0): non deve abbassare l'indice.
+  // A declared gap is an exact prediction of one's own performance (0): it must not lower the index.
   const err =
     qs.reduce((a, q) => a + Math.abs(expectedScore(q.confidence) - q.score.total), 0) / qs.length;
   return Math.max(0, Math.round(100 - err * 12));
@@ -136,10 +136,10 @@ export function finalGrade(sessions: SessionRecord[]): { grade: string; avg: num
   const cal = calibration(qs);
   let g = Math.round(18 + (avg / 10) * 12 + (cal - 50) / 25);
   g = Math.max(18, Math.min(31, g));
-  return { grade: g === 31 ? "30 e lode" : `${g}/30`, avg: Math.round(avg * 10) / 10 };
+  return { grade: g === 31 ? "30 cum laude" : `${g}/30`, avg: Math.round(avg * 10) / 10 };
 }
 
-/** Argomenti più deboli o lacune, per il Presidente. */
+/** Weakest topics or declared gaps, for the President. */
 export function weakestTopics(sessions: SessionRecord[], n = 3) {
   const best = new Map<string, QuestionRecord>();
   for (const s of sessions)
@@ -159,7 +159,7 @@ export function weakestTopics(sessions: SessionRecord[], n = 3) {
 }
 
 export const isProtest = (t: string) =>
-  /\b(ingiust|di nuovo|ancora questa|perche (mi|me)|gia (fatt|chiest)|non e giusto|basta|protest)/.test(
+  /\b(unfair|not fair|again|why (me|are you)|already (did|asked|answered)|enough|protest)/.test(
     norm(t),
   );
 
@@ -174,72 +174,70 @@ export function shuffle<T>(a: T[]): T[] {
 
 export const SUFFICIENT = 6;
 
-/** Punti carenti di una singola domanda, ricavati dalle risposte date dallo studente. */
+/** Weak points of a single question, derived from the answers the student gave. */
 export function diagnose(q: QuestionRecord): string[] {
   if (q.confidence === "lacuna")
-    return ["Argomento non sostenuto: lacuna dichiarata, da studiare da capo."];
+    return ["Topic not attempted: gap declared, to be studied from scratch."];
   const out: string[] = [];
   const { accuracy, completeness, logic, total } = q.score;
   if (accuracy < SUFFICIENT)
-    out.push(
-      `Accuratezza ${accuracy}/10: nelle risposte mancano concetti centrali dell'argomento.`,
-    );
+    out.push(`Accuracy ${accuracy}/10: the answers miss central concepts of the topic.`);
   if (completeness < SUFFICIENT)
     out.push(
-      `Completezza ${completeness}/10: risposte troppo brevi. Sviluppi definizione, meccanismo ed esempio.`,
+      `Completeness ${completeness}/10: answers too short. Develop definition, mechanism and example.`,
     );
   if (logic < SUFFICIENT)
     out.push(
-      `Tenuta logica ${logic}/10: i passaggi non sono collegati. Espliciti cause e conseguenze (perché, quindi, infatti).`,
+      `Logic ${logic}/10: the steps are not connected. Make causes and consequences explicit (because, therefore, so).`,
     );
   const label = CONFIDENCE[q.confidence].label;
   if (q.confidence !== "prudente" && total < SUFFICIENT)
-    out.push(`Sicurezza sopravvalutata: ha dichiarato "${label}" ma la resa è stata ${total}/10.`);
+    out.push(`Overconfident: you declared "${label}" but scored ${total}/10.`);
   if (q.confidence === "prudente" && total >= 8)
     out.push(
-      `Sicurezza sottovalutata: ha dichiarato "${label}" con una resa di ${total}/10. Poteva esporsi di più.`,
+      `Underconfident: you declared "${label}" and scored ${total}/10. You could have staked more.`,
     );
   return out;
 }
 
-/** Una domanda è carente se insufficiente, dichiarata come lacuna o con qualcosa da segnalare. */
+/** A question is weak if failed, declared as a gap, or with something to flag. */
 export const isWeak = (q: QuestionRecord) =>
   q.confidence === "lacuna" || q.score.total < SUFFICIENT || diagnose(q).length > 0;
 
-/** Referto di seduta in Markdown, scaricabile. */
+/** Session report in Markdown, downloadable. */
 export function sessionReportMarkdown(s: SessionRecord, title: string, date: string): string {
   const L: string[] = [];
   const course = s.questions[0]?.course;
-  L.push(`# Referto di seduta: ${title}`, "");
-  L.push(`- Data: ${date}`);
-  if (course) L.push(`- Corso: ${course}`);
-  L.push(`- Esaminatore: ${s.examinerName}`);
+  L.push(`# Session report: ${title}`, "");
+  L.push(`- Date: ${date}`);
+  if (course) L.push(`- Course: ${course}`);
+  L.push(`- Examiner: ${s.examinerName}`);
   L.push(
-    `- Esito: ${s.passed ? "convalidata" : "non convalidata"} con ${s.credits} crediti (soglia ${PASS_THRESHOLD})`,
+    `- Outcome: ${s.passed ? "passed" : "not passed"} with ${s.credits} credits (threshold ${PASS_THRESHOLD})`,
   );
-  L.push(`- Calibrazione della sicurezza: ${calibration(s.questions)}%`, "");
+  L.push(`- Confidence calibration: ${calibration(s.questions)}%`, "");
 
   const weak = s.questions.filter(isWeak);
-  L.push("## Punti carenti", "");
-  if (!weak.length) L.push("Nessun punto carente rilevato in questa seduta.", "");
+  L.push("## Weak points", "");
+  if (!weak.length) L.push("No weak points found in this session.", "");
   for (const q of weak) {
     L.push(`### ${q.topicTitle} (${q.score.total}/10)`, "");
     for (const d of diagnose(q)) L.push(`- ${d}`);
-    if (q.missed?.length) L.push(`- Concetti non toccati: ${q.missed.join(", ")}.`);
-    if (q.feedback) L.push("", `**Giudizio dell'esaminatore.** ${q.feedback}`);
-    L.push("", `**Cosa avrebbe dovuto dire.** ${q.model}`, "");
+    if (q.missed?.length) L.push(`- Concepts not covered: ${q.missed.join(", ")}.`);
+    if (q.feedback) L.push("", `**Examiner's feedback.** ${q.feedback}`);
+    L.push("", `**What you should have said.** ${q.model}`, "");
   }
 
-  L.push("## Dettaglio delle domande", "");
+  L.push("## Question details", "");
   for (const q of s.questions) {
-    const conf = q.confidence === "lacuna" ? "Lacuna riconosciuta" : CONFIDENCE[q.confidence].label;
+    const conf = q.confidence === "lacuna" ? "Gap declared" : CONFIDENCE[q.confidence].label;
     L.push(`### ${q.topicTitle}`, "");
     L.push(
-      `Sicurezza dichiarata: ${conf}. Punteggio ${q.score.total}/10 (accuratezza ${q.score.accuracy}, completezza ${q.score.completeness}, tenuta logica ${q.score.logic}). Crediti ${q.delta >= 0 ? "+" : ""}${q.delta}.`,
+      `Stated confidence: ${conf}. Score ${q.score.total}/10 (accuracy ${q.score.accuracy}, completeness ${q.score.completeness}, logic ${q.score.logic}). Credits ${q.delta >= 0 ? "+" : ""}${q.delta}.`,
       "",
     );
     for (const t of q.transcript)
-      L.push(`> **${t.role === "prof" ? q.examiner : "Studente"}:** ${t.text}`, ">");
+      L.push(`> **${t.role === "prof" ? q.examiner : "Student"}:** ${t.text}`, ">");
     L.pop();
     L.push("");
   }
@@ -247,9 +245,9 @@ export function sessionReportMarkdown(s: SessionRecord, title: string, date: str
   return L.join("\n");
 }
 
-/** Dichiara come è stata prodotta l'analisi: valutatore AI oppure parole chiave. */
+/** States how the analysis was produced: AI evaluator or keywords. */
 export function reportDisclaimer(s: SessionRecord): string {
   return s.questions.some((q) => q.ai)
-    ? "Analisi generata da un modello AI sulla trascrizione delle risposte: può sbagliare, indica cosa ripassare e non sostituisce il giudizio di un docente."
-    : "Analisi automatica basata sui concetti chiave del programma presenti nelle risposte: indica cosa ripassare, non sostituisce il giudizio di un docente.";
+    ? "Analysis generated by an AI model from the transcript of your answers: it can be wrong, it points to what to review and does not replace a teacher's judgement."
+    : "Automatic analysis based on the key syllabus concepts found in your answers: it points to what to review and does not replace a teacher's judgement.";
 }

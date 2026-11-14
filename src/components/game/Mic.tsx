@@ -2,13 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { MAX_ANSWER_SECONDS, transcribeAnswer } from "@/lib/game/voice";
 
 /**
- * Registrazione della risposta a voce. Il microfono si accende solo quando lo studente preme il
- * pulsante e si spegne a fine registrazione; l'audio viene convertito qui in WAV mono a 16 kHz
- * prima dell'invio.
+ * Recording of the spoken answer. The microphone turns on only when the student presses the
+ * button and turns off when recording ends; the audio is converted here to 16 kHz mono WAV
+ * before being sent.
  */
 const RATE = 16000;
 
-/** Converte una registrazione del browser in WAV mono a 16 kHz, codificato in base64. */
+/** Converts a browser recording to 16 kHz mono WAV, base64-encoded. */
 async function toWavBase64(blob: Blob): Promise<string> {
   const ctx = new AudioContext();
   try {
@@ -50,9 +50,8 @@ async function toWavBase64(blob: Blob): Promise<string> {
 }
 
 /**
- * Pulsante del microfono: un tocco avvia la registrazione, un secondo la chiude e la trascrive.
- * Il testo trascritto viene consegnato a `onText`, così lo studente può rileggerlo prima di
- * rispondere.
+ * Microphone button: one tap starts recording, a second one stops and transcribes it. The
+ * transcribed text is handed to `onText`, so the student can reread it before answering.
  */
 export function Mic({ disabled, onText }: { disabled: boolean; onText: (text: string) => void }) {
   const [state, setState] = useState<"idle" | "recording" | "working">("idle");
@@ -82,12 +81,12 @@ export function Mic({ disabled, onText }: { disabled: boolean; onText: (text: st
   async function start() {
     setError(null);
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined")
-      return setError("Questo browser non permette di registrare: risponda per iscritto.");
+      return setError("This browser cannot record: please answer in writing.");
     let stream: MediaStream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch {
-      return setError("Microfono non disponibile o permesso negato: risponda per iscritto.");
+      return setError("Microphone unavailable or permission denied: please answer in writing.");
     }
     const chunks: Blob[] = [];
     const r = new MediaRecorder(stream);
@@ -102,10 +101,9 @@ export function Mic({ disabled, onText }: { disabled: boolean; onText: (text: st
         const out = await transcribeAnswer({ data: { wav } });
         if (!alive.current) return;
         if (out.ok && out.text) onText(out.text);
-        else setError("Non ho capito la registrazione: riprovi o risponda per iscritto.");
+        else setError("Could not understand the recording: try again or answer in writing.");
       } catch {
-        if (alive.current)
-          setError("Registrazione non leggibile: riprovi o risponda per iscritto.");
+        if (alive.current) setError("Recording unreadable: try again or answer in writing.");
       }
       if (alive.current) setState("idle");
     };
@@ -123,7 +121,7 @@ export function Mic({ disabled, onText }: { disabled: boolean; onText: (text: st
         aria-pressed={recording}
         onClick={() => (recording ? rec.current?.stop() : void start())}
       >
-        {recording ? `■ Ferma · ${seconds}s` : state === "working" ? "Trascrivo…" : "● Parla"}
+        {recording ? `■ Stop · ${seconds}s` : state === "working" ? "Transcribing…" : "● Speak"}
       </button>
       <span role="status" className="max-w-40 text-xs text-destructive">
         {error}

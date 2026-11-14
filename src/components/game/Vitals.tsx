@@ -2,12 +2,12 @@ import { CONFIDENCE } from "@/lib/game/data";
 import { SUFFICIENT, expectedScore, type QuestionRecord } from "@/lib/game/engine";
 
 /**
- * Indicatori nello stile "Oral Exam Quest": il battito che sale con la pressione, le monete
- * della puntata di sicurezza e il confronto tra quanto si credeva di sapere e quanto si è
- * dimostrato. Ogni indicatore ha anche il valore scritto, mai solo il colore.
+ * Indicators in the "Oral Exam Quest" style: the heartbeat that rises with pressure, the coins
+ * of the confidence stake and the comparison between what you thought you knew and what you
+ * proved. Every indicator also has its written value, never colour alone.
  */
 
-/** Cuore a pixel. */
+/** Pixel heart. */
 export function Heart({ size = 24 }: { size?: number }) {
   const rows = [
     "..kk...kk..",
@@ -45,8 +45,8 @@ export function Heart({ size = 24 }: { size?: number }) {
 }
 
 /**
- * Tracciato del battito: più battiti al minuto, più picchi ravvicinati e colore dal verde al
- * rosso. È un termometro della pressione della domanda, non una misura reale.
+ * Heartbeat trace: more beats per minute, closer spikes and colour from green to red. It is a
+ * gauge of the pressure of the question, not a real measurement.
  */
 export function Pulse({ bpm }: { bpm: number }) {
   const color =
@@ -64,7 +64,7 @@ export function Pulse({ bpm }: { bpm: number }) {
   return (
     <div
       role="img"
-      aria-label={`Tensione: ${bpm} battiti al minuto`}
+      aria-label={`Tension: ${bpm} beats per minute`}
       className="flex items-center gap-2"
     >
       <Heart size={24} />
@@ -90,7 +90,7 @@ export function Pulse({ bpm }: { bpm: number }) {
   );
 }
 
-/** Monete della puntata: tante quante il moltiplicatore dei crediti. */
+/** Stake coins: as many as the credit multiplier. */
 export function Coins({ n }: { n: number }) {
   return (
     <span className="inline-flex gap-1" aria-hidden="true">
@@ -106,8 +106,8 @@ export function Coins({ n }: { n: number }) {
 }
 
 /**
- * "Pensato" contro "Dimostrato": la resa attesa per la sicurezza dichiarata accanto a quella
- * ottenuta. Se la resa è inferiore, lo scarto è tratteggiato in rosso.
+ * "Thought" versus "Proven": the performance expected for the declared confidence next to the
+ * one achieved. If performance is lower, the gap is hatched in red.
  */
 export function GapBars({ q }: { q: QuestionRecord }) {
   if (q.confidence === "lacuna") return null;
@@ -118,7 +118,7 @@ export function GapBars({ q }: { q: QuestionRecord }) {
   return (
     <div className="w-full max-w-sm">
       <div className="flex items-baseline justify-between font-display text-xl leading-none">
-        <span>Pensato</span>
+        <span>Thought</span>
         <span className="text-muted-foreground">
           {CONFIDENCE[q.confidence].label} · {thought}/10
         </span>
@@ -127,7 +127,7 @@ export function GapBars({ q }: { q: QuestionRecord }) {
         <div style={{ width: pct(thought) }} />
       </div>
       <div className="mt-3 flex items-baseline justify-between font-display text-xl leading-none">
-        <span>Dimostrato</span>
+        <span>Proven</span>
         <span className="text-muted-foreground">{proven}/10</span>
       </div>
       <div className="meter mt-1 flex">
@@ -138,12 +138,12 @@ export function GapBars({ q }: { q: QuestionRecord }) {
         className={`mt-2 font-display text-2xl leading-none ${gap > 0 ? "text-destructive" : "text-[var(--green-ink)]"}`}
       >
         {gap > 0
-          ? `Scarto −${gap}`
+          ? `Gap −${gap}`
           : proven >= SUFFICIENT
             ? gap < 0
-              ? `Oltre le attese +${-gap}`
-              : "In linea con le attese"
-            : "In linea, ma insufficiente"}
+              ? `Above expectations +${-gap}`
+              : "In line with expectations"
+            : "In line, but insufficient"}
       </div>
     </div>
   );

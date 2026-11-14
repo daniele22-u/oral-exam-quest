@@ -1,8 +1,8 @@
 /**
- * Mappa del percorso nello stile "Oral Exam Quest": porte piatte e colorate in fila su una
- * striscia di piastrelle, con lo studente davanti alla prossima da affrontare. Tutto è disegnato
- * qui come griglie di pixel 16×16 (nessuna immagine esterna). La mappa illustra lo stato: ogni
- * porta ha la sua etichetta testuale e l'unica porta attivabile è un vero pulsante.
+ * Path map in the "Oral Exam Quest" style: flat coloured doors in a row on a strip of tiles,
+ * with the student in front of the next one to face. Everything is drawn here as 16×16 pixel
+ * grids (no external images). The map illustrates state: every door has its text label and
+ * the only door that can be activated is a real button.
  */
 const SIZE = 16;
 type Grid = string[][];
@@ -10,11 +10,11 @@ type Grid = string[][];
 const PALETTE: Record<string, string> = {
   k: "#1a192e",
   w: "#ffffff",
-  l: "#dbe0e7", // porta ancora chiusa
-  y: "#f4b73a", // porta da affrontare
-  g: "#38b271", // porta superata
-  r: "#e03a49", // sala del Presidente aperta
-  n: "#2b2a4a", // sala del Presidente sigillata
+  l: "#dbe0e7", // door still closed
+  y: "#f4b73a", // door to face next
+  g: "#38b271", // door passed
+  r: "#e03a49", // President's hall open
+  n: "#2b2a4a", // President's hall sealed
   b: "#386ee0",
   h: "#5a3820",
   s: "#f0c89f",
@@ -43,7 +43,7 @@ export function Pixels({ grid, size, label }: { grid: Grid; size: number; label?
 
 const parse = (rows: string[]): Grid => rows.map((r) => r.split(""));
 
-/** Porta rettangolare: contorno, riempimento, riflesso in alto e pomello. `top` ne fissa l'altezza. */
+/** Rectangular door: outline, fill, highlight at the top and knob. `top` sets its height. */
 function doorGrid(
   fill: string,
   top: number,
@@ -138,7 +138,7 @@ const STUDENT = parse([
   "................",
 ]);
 
-/** Lo studente del gioco, riusabile fuori dalla mappa. */
+/** The game's student, reusable outside the map. */
 export function Student({ size = 48 }: { size?: number }) {
   return <Pixels grid={STUDENT} size={size} />;
 }
@@ -151,24 +151,24 @@ export function QuestMap({
   bossPassed,
   onEnter,
 }: {
-  /** Sedute preliminari necessarie. */
+  /** Preliminary sessions required. */
   required: number;
-  /** Sedute preliminari convalidate. */
+  /** Preliminary sessions passed. */
   passed: number;
   bossPassed: boolean;
-  /** Entra nella porta raggiungibile (seduta successiva o Commissione). */
+  /** Enter the reachable door (next session or the Board). */
   onEnter: () => void;
 }) {
   const unlocked = passed >= required;
-  // Colonna in cui si trova lo studente: davanti alla prossima porta da affrontare.
+  // Column where the student stands: in front of the next door to face.
   const here = Math.min(passed, required);
   const stops = [
     ...Array.from({ length: required }, (_, i) => {
       const state: DoorState = i < passed ? "done" : i === passed ? "next" : "closed";
       return {
         key: `s${i}`,
-        title: `Seduta ${NUMERALS[i] ?? i + 1}`,
-        status: state === "done" ? "Convalidata" : state === "next" ? "Da sostenere" : "Chiusa",
+        title: `Session ${NUMERALS[i] ?? i + 1}`,
+        status: state === "done" ? "Passed" : state === "next" ? "Up next" : "Closed",
         grid: door(state),
         size: 80,
         active: state === "next",
@@ -179,9 +179,9 @@ export function QuestMap({
       const state: GateState = bossPassed ? "done" : unlocked ? "open" : "locked";
       return {
         key: "boss",
-        // "Plenaria" e non "Commissione": l'etichetta deve stare in una colonna anche su telefono.
-        title: "Plenaria",
-        status: bossPassed ? "Superata" : unlocked ? "Aperta" : "Sigillata",
+        // A short label: it must fit in one column even on a phone.
+        title: "Plenary",
+        status: bossPassed ? "Passed" : unlocked ? "Open" : "Sealed",
         grid: gate(state),
         size: 80,
         active: state === "open",
@@ -200,7 +200,7 @@ export function QuestMap({
               <button
                 onClick={onEnter}
                 className="quest-door"
-                aria-label={`${s.title}: ${s.status}. Entra`}
+                aria-label={`${s.title}: ${s.status}. Enter`}
               >
                 <Pixels grid={s.grid} size={s.size} />
               </button>

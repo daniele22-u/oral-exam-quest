@@ -5,8 +5,8 @@ import { Icon } from "./Art";
 import type { CourseOption } from "./Onboarding";
 
 /**
- * Scheda Materiali: le lezioni del corso con le loro fonti e, per ciascuna, quanto è andata
- * l'ultima interrogazione. Da qui si cambia corso o se ne aggiunge uno a mano.
+ * Materials tab: the course lectures with their sources and, for each, how the last
+ * examination went. The course can be changed here, or one added by hand.
  */
 export interface Custom {
   name: string;
@@ -29,9 +29,9 @@ export function Materials({
   setCourse: (c: string) => void;
   custom: Custom;
   setCustom: (c: Custom) => void;
-  /** Argomenti riconosciuti nella materia inserita a mano. */
+  /** Topics recognised in the hand-entered course. */
   customCount: number;
-  /** Tutte le domande sostenute finora, in ordine di tempo. */
+  /** Every question answered so far, in chronological order. */
   questions: QuestionRecord[];
   linked: boolean;
 }) {
@@ -44,17 +44,17 @@ export function Materials({
 
   return (
     <section className="anim-slide">
-      <h2 className="font-display text-5xl leading-none">Materiali</h2>
+      <h2 className="font-display text-5xl leading-none">Materials</h2>
       <p className="mt-2 text-muted-foreground">
         {linked
-          ? "Importati da WeBeep (simulazione). Ogni lezione è un possibile argomento d'esame."
-          : "Programma di esempio. Collega i servizi dal profilo per importare i tuoi corsi."}
+          ? "Imported from WeBeep (simulation). Each lecture is a possible exam topic."
+          : "Sample syllabus. Connect the services from your profile to import your courses."}
       </p>
 
-      <div className="mt-5 flex flex-wrap gap-2" role="radiogroup" aria-label="Corso">
+      <div className="mt-5 flex flex-wrap gap-2" role="radiogroup" aria-label="Course">
         {[
           ...courses.map((c) => [c.id, c.title] as const),
-          ["custom", "Materia a mano"] as const,
+          ["custom", "Custom course"] as const,
         ].map(([id, title]) => (
           <button
             key={id}
@@ -71,7 +71,7 @@ export function Materials({
       {course === "custom" ? (
         <div className="panel mt-6 grid gap-3 p-5">
           <label className="grid gap-1">
-            <span className="eyebrow text-muted-foreground">Nome del corso</span>
+            <span className="eyebrow text-muted-foreground">Course name</span>
             <input
               className="field"
               value={custom.name}
@@ -79,7 +79,7 @@ export function Materials({
             />
           </label>
           <label className="grid gap-1">
-            <span className="eyebrow text-muted-foreground">Argomenti, uno per riga</span>
+            <span className="eyebrow text-muted-foreground">Topics, one per line</span>
             <textarea
               className="field min-h-32"
               value={custom.topics}
@@ -90,8 +90,8 @@ export function Materials({
             role="status"
             className={`text-sm ${customCount >= 3 ? "text-[var(--green-ink)]" : "text-destructive"}`}
           >
-            {customCount} {customCount === 1 ? "argomento riconosciuto" : "argomenti riconosciuti"}
-            {customCount >= 3 ? " · pronto per l'esame" : " · ne servono almeno 3"}
+            {customCount} {customCount === 1 ? "topic recognised" : "topics recognised"}
+            {customCount >= 3 ? " · ready for the exam" : " · at least 3 needed"}
           </p>
         </div>
       ) : (
@@ -109,9 +109,9 @@ export function Materials({
           </div>
 
           <div className="mt-6 flex items-baseline justify-between">
-            <h3 className="font-display text-3xl leading-none">Lezioni</h3>
+            <h3 className="font-display text-3xl leading-none">Lectures</h3>
             <span className="text-sm text-muted-foreground">
-              {asked}/{lessons.length} già interrogate
+              {asked}/{lessons.length} already examined
             </span>
           </div>
           <ul className="mt-3 grid gap-3 lg:grid-cols-2">
@@ -136,13 +136,13 @@ export function Materials({
                           <Icon key={s.name} name={s.kind} size={20} />
                         ))}
                         <span className="sr-only">
-                          Fonti: {l.sources.map((s) => SOURCE_LABEL[s.kind]).join(", ")}
+                          Sources: {l.sources.map((s) => SOURCE_LABEL[s.kind]).join(", ")}
                         </span>
                       </span>
                     </span>
                     <span className="w-20 shrink-0 text-right">
                       {score === null ? (
-                        <span className="text-xs text-muted-foreground">Da fare</span>
+                        <span className="text-xs text-muted-foreground">To do</span>
                       ) : (
                         <>
                           <span className="font-display text-2xl leading-none">{score}/10</span>

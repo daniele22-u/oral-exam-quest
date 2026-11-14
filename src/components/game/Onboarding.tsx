@@ -5,9 +5,9 @@ import { Portrait } from "./Portrait";
 import { Student } from "./QuestMap";
 
 /**
- * Configurazione iniziale: un passo per schermata, come nelle app di apprendimento. Il
- * collegamento ai Servizi Online del Politecnico e a WeBeep è SIMULATO: non si chiedono
- * credenziali e non parte alcuna richiesta verso quei servizi. Ogni passo si può saltare.
+ * Onboarding: one step per screen, as in learning apps. The connection to the Politecnico
+ * Online Services and to WeBeep is SIMULATED: no credentials are asked for and no request is
+ * sent to those services. Every step can be skipped.
  */
 export interface Profile {
   polimi: boolean;
@@ -20,7 +20,7 @@ export interface CourseOption {
   lessons: Lesson[];
 }
 
-const STEPS = ["Benvenuto", "Politecnico", "WeBeep", "Corso", "Esame"] as const;
+const STEPS = ["Welcome", "Politecnico", "WeBeep", "Course", "Exam"] as const;
 const KINDS: SourceKind[] = ["video", "trascrizione", "appunti", "audio"];
 
 export function Onboarding({
@@ -40,7 +40,7 @@ export function Onboarding({
 }) {
   const [step, setStep] = useState(0);
   const next = () => setStep((s) => Math.min(STEPS.length - 1, s + 1));
-  // Ogni passo è una schermata nuova: si riparte dall'alto.
+  // Each step is a new screen: start from the top.
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [step]);
@@ -53,22 +53,22 @@ export function Onboarding({
           className="icon-btn"
           onClick={() => setStep((s) => Math.max(0, s - 1))}
           disabled={step === 0}
-          aria-label="Passo precedente"
+          aria-label="Previous step"
         >
           ←
         </button>
-        <ol className="flex flex-1 gap-1.5" aria-label={`Passo ${step + 1} di ${STEPS.length}`}>
+        <ol className="flex flex-1 gap-1.5" aria-label={`Step ${step + 1} of ${STEPS.length}`}>
           {STEPS.map((s, i) => (
             <li key={s} className={`step-seg ${i <= step ? "step-seg-on" : ""}`}>
               <span className="sr-only">
                 {s}
-                {i === step ? " (passo attuale)" : ""}
+                {i === step ? " (current step)" : ""}
               </span>
             </li>
           ))}
         </ol>
         <button className="skip-btn" onClick={onDone}>
-          Salta · demo
+          Skip · demo
         </button>
       </div>
 
@@ -85,24 +85,25 @@ export function Onboarding({
                 <em>Quest</em>
               </h1>
               <p className="mt-6 font-display text-3xl leading-none">
-                Non basta sapere. <span className="text-destructive">Devi sapere quanto sai.</span>
+                Knowing is not enough.{" "}
+                <span className="text-destructive">Know how much you know.</span>
               </p>
               <p className="mt-4 text-muted-foreground">
-                Colleghi i tuoi corsi, l'app legge lezioni e appunti e ti interroga come a un vero
-                orale.
+                Connect your courses: the app reads your lectures and notes and questions you like a
+                real oral exam.
               </p>
               <button className="btn-main mt-8 w-full md:w-auto" onClick={next}>
-                Inizia
+                Start
               </button>
             </>
           )}
 
           {step === 1 && (
             <Connect
-              title="Collega i Servizi Online"
-              text="Dal piano di studi prendiamo l'elenco dei tuoi corsi di questo semestre."
-              tasks={["Apro la sessione", "Leggo il piano di studi", "Trovo i corsi attivi"]}
-              result={`${courses.length} corsi trovati`}
+              title="Connect Online Services"
+              text="From your study plan we take the list of your courses this semester."
+              tasks={["Opening the session", "Reading the study plan", "Finding active courses"]}
+              result={`${courses.length} courses found`}
               connected={profile.polimi}
               onConnected={() => setProfile({ ...profile, polimi: true })}
               onNext={next}
@@ -111,10 +112,10 @@ export function Onboarding({
 
           {step === 2 && (
             <Connect
-              title="Collega WeBeep"
-              text="Da ogni corso prendiamo registrazioni, trascrizioni, audio e appunti caricati."
-              tasks={["Apro i corsi", "Elenco le lezioni", "Raccolgo i materiali"]}
-              result={`${courses.reduce((a, c) => a + c.lessons.length, 0)} lezioni trovate`}
+              title="Connect WeBeep"
+              text="From each course we take the uploaded recordings, transcripts, audio and notes."
+              tasks={["Opening the courses", "Listing the lectures", "Collecting the materials"]}
+              result={`${courses.reduce((a, c) => a + c.lessons.length, 0)} lectures found`}
               connected={profile.webeep}
               onConnected={() => setProfile({ ...profile, webeep: true })}
               onNext={next}
@@ -123,9 +124,11 @@ export function Onboarding({
 
           {step === 3 && (
             <>
-              <h2 className="font-display text-5xl leading-none">Quale esame prepari?</h2>
-              <p className="mt-3 text-muted-foreground">Potrai cambiarlo dalla scheda Materiali.</p>
-              <div className="mt-6 grid gap-3" role="radiogroup" aria-label="Corso">
+              <h2 className="font-display text-5xl leading-none">Which exam are you preparing?</h2>
+              <p className="mt-3 text-muted-foreground">
+                You can change it later in the Materials tab.
+              </p>
+              <div className="mt-6 grid gap-3" role="radiogroup" aria-label="Course">
                 {courses.map((c) => {
                   const n = countSources(c.lessons);
                   const on = c.id === chosen.id;
@@ -141,7 +144,7 @@ export function Onboarding({
                       <span className="min-w-0 flex-1">
                         <span className="block font-display text-3xl leading-none">{c.title}</span>
                         <span className="mt-1 block text-sm text-muted-foreground">
-                          {c.lessons.length} lezioni · {n.video} registrazioni · {n.appunti} appunti
+                          {c.lessons.length} lectures · {n.video} recordings · {n.appunti} notes
                         </span>
                       </span>
                       <span
@@ -153,7 +156,7 @@ export function Onboarding({
                 })}
               </div>
               <button className="btn-main mt-8 w-full md:w-auto" onClick={next}>
-                Continua
+                Continue
               </button>
             </>
           )}
@@ -165,7 +168,7 @@ export function Onboarding({
   );
 }
 
-/** Illustrazione del passo: mostra cosa sta per succedere, prima del testo. */
+/** Step illustration: shows what is about to happen, before the text. */
 function Scene({ step, lessons }: { step: number; lessons: Lesson[] }) {
   if (step === 0)
     return (
@@ -247,7 +250,7 @@ function Connect({
   onConnected: () => void;
   onNext: () => void;
 }) {
-  // -1 fermo; da 0 in poi quante operazioni sono concluse.
+  // -1 idle; from 0 up, how many operations are done.
   const [progress, setProgress] = useState(connected ? tasks.length : -1);
   useEffect(() => {
     if (progress < 0 || progress >= tasks.length) return;
@@ -256,13 +259,13 @@ function Connect({
       if (progress + 1 >= tasks.length) onConnected();
     }, 650);
     return () => window.clearTimeout(id);
-    // onConnected cambia a ogni render: conta solo l'avanzamento.
+    // onConnected changes on every render: only progress matters.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [progress, tasks.length]);
   const done = progress >= tasks.length;
   return (
     <>
-      <span className="sim-chip">Simulazione · nessun accesso reale</span>
+      <span className="sim-chip">Simulation · no real sign-in</span>
       <h2 className="mt-3 font-display text-5xl leading-none">{title}</h2>
       <p className="mt-3 text-muted-foreground">{text}</p>
       <ul className="mt-6 grid gap-2" aria-live="polite">
@@ -275,7 +278,7 @@ function Connect({
               </span>
               {t}
               <span className="sr-only">
-                {state === "ok" ? " — fatto" : state === "run" ? " — in corso" : ""}
+                {state === "ok" ? " — done" : state === "run" ? " — in progress" : ""}
               </span>
             </li>
           );
@@ -284,10 +287,10 @@ function Connect({
       {done ? (
         <>
           <p className="anim-pop mt-5 font-display text-3xl leading-none text-[var(--green-ink)]">
-            Collegato · {result}
+            Connected · {result}
           </p>
           <button className="btn-main mt-6 w-full md:w-auto" onClick={onNext}>
-            Continua
+            Continue
           </button>
         </>
       ) : (
@@ -297,21 +300,21 @@ function Connect({
             disabled={progress >= 0}
             onClick={() => setProgress(0)}
           >
-            {progress >= 0 ? "Collego…" : "Collega"}
+            {progress >= 0 ? "Connecting…" : "Connect"}
           </button>
           <button className="skip-btn" onClick={onNext} disabled={progress >= 0}>
-            Salta questo passo
+            Skip this step
           </button>
         </div>
       )}
       <p className="mt-6 text-xs text-muted-foreground">
-        Prototipo: non ti viene chiesta alcuna password e nessun dato lascia il tuo dispositivo.
+        Prototype: you are never asked for a password and no data leaves your device.
       </p>
     </>
   );
 }
 
-/** Ultimo passo: i materiali vengono "letti" uno a uno e diventano argomenti d'esame. */
+/** Last step: materials are "read" one by one and become exam topics. */
 function Build({
   lessons,
   title,
@@ -335,16 +338,15 @@ function Build({
   return (
     <>
       <h2 className="font-display text-5xl leading-none">
-        {done ? "Il tuo esame è pronto" : "Preparo il tuo esame"}
+        {done ? "Your exam is ready" : "Preparing your exam"}
       </h2>
       <p className="mt-3 text-muted-foreground">
-        Mescolo appunti e trascrizioni di <b>{title}</b>: da ogni lezione nasce un argomento
-        d'esame.
+        Mixing notes and transcripts from <b>{title}</b>: each lecture becomes an exam topic.
       </p>
       <div
         className="meter mt-6"
         role="progressbar"
-        aria-label="Lettura dei materiali"
+        aria-label="Reading the materials"
         aria-valuemin={0}
         aria-valuemax={files.length}
         aria-valuenow={Math.min(i, files.length)}
@@ -355,9 +357,9 @@ function Build({
         />
       </div>
       <p className="mt-2 h-5 truncate text-sm text-muted-foreground" aria-hidden="true">
-        {done ? `${files.length} file letti` : `Leggo ${files[i]}`}
+        {done ? `${files.length} files read` : `Reading ${files[i]}`}
       </p>
-      <ul className="mt-5 flex flex-wrap gap-2" aria-label="Argomenti d'esame">
+      <ul className="mt-5 flex flex-wrap gap-2" aria-label="Exam topics">
         {lessons.map((l, k) =>
           (k + 1) / lessons.length <= (i + 0.001) / Math.max(1, files.length) || done ? (
             <li key={l.topicId} className="topic-chip anim-pop">
@@ -367,7 +369,7 @@ function Build({
         )}
       </ul>
       <button className="btn-main mt-8 w-full md:w-auto" disabled={!done} onClick={onDone}>
-        Vai all'esame
+        Go to the exam
       </button>
     </>
   );

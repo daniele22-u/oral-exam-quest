@@ -5,14 +5,14 @@ import { Student } from "./QuestMap";
 import { Heart } from "./Vitals";
 
 /**
- * Cornice dell'app: barra in alto con il profilo a destra e tre schede. Su telefono le schede
- * stanno in basso, a portata di pollice; su schermi larghi diventano una colonna a sinistra.
+ * App frame: top bar with the profile on the right and three tabs. On phones the tabs sit at
+ * the bottom, within thumb reach; on wide screens they become a left column.
  */
 export type Tab = "hub" | "materials" | "report";
 const TABS: { id: Tab; label: string; icon: IconName }[] = [
-  { id: "hub", label: "Percorso", icon: "door" },
-  { id: "materials", label: "Materiali", icon: "book" },
-  { id: "report", label: "Fascicolo", icon: "folder" },
+  { id: "hub", label: "Path", icon: "door" },
+  { id: "materials", label: "Materials", icon: "book" },
+  { id: "report", label: "Record", icon: "folder" },
 ];
 
 export function TopBar({
@@ -34,16 +34,16 @@ export function TopBar({
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="stat-chip" title="Sedute convalidate">
+          <span className="stat-chip" title="Sessions passed">
             <Icon name="door" size={20} />
             <span aria-hidden="true">
               {passed}/{required}
             </span>
             <span className="sr-only">
-              {passed} sedute convalidate su {required}
+              {passed} of {required} sessions passed
             </span>
           </span>
-          <button className="avatar-btn" onClick={onProfile} aria-label="Profilo e impostazioni">
+          <button className="avatar-btn" onClick={onProfile} aria-label="Profile and settings">
             <Student size={36} />
           </button>
         </div>
@@ -54,7 +54,7 @@ export function TopBar({
 
 export function TabBar({ current, onSelect }: { current: Tab | null; onSelect: (t: Tab) => void }) {
   return (
-    <nav className="tabbar" aria-label="Sezioni">
+    <nav className="tabbar" aria-label="Sections">
       {TABS.map((t) => (
         <button
           key={t.id}
@@ -97,7 +97,7 @@ export function ProfileSheet({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
   const services: [string, boolean, IconName][] = [
-    ["Servizi Online Polimi", profile.polimi, "campus"],
+    ["Polimi Online Services", profile.polimi, "campus"],
     ["WeBeep", profile.webeep, "cloud"],
   ];
   return (
@@ -106,7 +106,7 @@ export function ProfileSheet({
         className="sheet"
         role="dialog"
         aria-modal="true"
-        aria-label="Profilo"
+        aria-label="Profile"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-4">
@@ -114,15 +114,15 @@ export function ProfileSheet({
             <Student size={56} />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="font-display text-3xl leading-none">Studente demo</div>
+            <div className="font-display text-3xl leading-none">Demo student</div>
             <div className="truncate text-sm text-muted-foreground">{course}</div>
           </div>
-          <button ref={close} className="icon-btn" onClick={onClose} aria-label="Chiudi">
+          <button ref={close} className="icon-btn" onClick={onClose} aria-label="Close">
             ✕
           </button>
         </div>
 
-        <h3 className="eyebrow mt-6 text-muted-foreground">Servizi collegati</h3>
+        <h3 className="eyebrow mt-6 text-muted-foreground">Connected services</h3>
         <ul className="mt-2 grid gap-2">
           {services.map(([name, on, icon]) => (
             <li key={name} className="flex items-center gap-3 border-2 border-ink p-3">
@@ -131,25 +131,25 @@ export function ProfileSheet({
               <span
                 className={`font-display text-xl leading-none ${on ? "text-[var(--green-ink)]" : "text-muted-foreground"}`}
               >
-                {on ? "Collegato" : "Non collegato"}
+                {on ? "Connected" : "Not connected"}
               </span>
             </li>
           ))}
         </ul>
         <p className="mt-2 text-xs text-muted-foreground">
-          Collegamenti simulati: nessun accesso reale ai servizi dell'ateneo.
+          Simulated connections: no real access to university services.
         </p>
         <button className="btn-ghost mt-3 w-full" onClick={onConnect}>
-          {profile.polimi && profile.webeep ? "Rivedi la configurazione" : "Collega i servizi"}
+          {profile.polimi && profile.webeep ? "Review the setup" : "Connect services"}
         </button>
 
-        <h3 className="eyebrow mt-6 text-muted-foreground">Come sostieni l'esame</h3>
+        <h3 className="eyebrow mt-6 text-muted-foreground">How you take the exam</h3>
         {ai ? (
-          <div role="group" aria-label="Modalità d'esame" className="mt-2 grid grid-cols-2">
+          <div role="group" aria-label="Exam mode" className="mt-2 grid grid-cols-2">
             {(
               [
-                [false, "Testo"],
-                [true, "Voce"],
+                [false, "Text"],
+                [true, "Voice"],
               ] as const
             ).map(([v, label]) => (
               <button
@@ -164,19 +164,19 @@ export function ProfileSheet({
           </div>
         ) : (
           <p className="mt-2 text-sm text-muted-foreground">
-            Modalità demo: domande predefinite, solo testo. La voce richiede l'esaminatore AI.
+            Demo mode: preset questions, text only. Voice requires the AI examiner.
           </p>
         )}
         <p className="mt-2 text-xs text-muted-foreground">
           {ai
             ? voice
-              ? "L'esaminatore parla e puoi rispondere al microfono."
-              : "Leggi le domande e rispondi per iscritto."
+              ? "The examiner speaks and you can answer by microphone."
+              : "Read the questions and answer in writing."
             : ""}
         </p>
 
         <button className="skip-btn mt-6" onClick={onReset}>
-          Cancella il fascicolo e ricomincia
+          Delete record and start over
         </button>
       </div>
     </div>

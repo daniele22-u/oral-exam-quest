@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { speakLine } from "@/lib/game/voice";
 import type { Mood, Who } from "./Portrait";
 
-/** Riproduce le battute dell'esaminatore, una alla volta: una nuova interrompe la precedente. */
+/** Plays the examiner's lines one at a time: a new one interrupts the previous. */
 export function useSpeaker() {
   const audio = useRef<HTMLAudioElement | null>(null);
   const ticket = useRef(0);
   const [state, setState] = useState<"idle" | "loading" | "playing">("idle");
-  // La voce non è arrivata (quota esaurita, rete): va detto, altrimenti sembra un guasto muto.
+  // The voice did not arrive (quota exhausted, network): say so, or it looks like a silent fault.
   const [failed, setFailed] = useState(false);
   const stop = () => {
     ticket.current++;
@@ -31,7 +31,7 @@ export function useSpeaker() {
     audio.current = a;
     a.onended = () => mine === ticket.current && setState("idle");
     setState("playing");
-    // Il browser può bloccare l'avvio automatico: resta il pulsante "Riascolta".
+    // The browser may block autoplay: the "Listen again" button remains.
     a.play().catch(() => mine === ticket.current && setState("idle"));
   }
   return { speak, stop, state, failed };
