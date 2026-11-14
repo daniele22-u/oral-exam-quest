@@ -30,7 +30,7 @@
  */
 
 @theme inline {
-  --font-display: "Cormorant Garamond", Georgia, serif;
+  --font-display: "Silkscreen", ui-monospace, "Courier New", monospace;
   --font-sans: "Karla", system-ui, sans-serif;
   --color-brass: var(--brass);
   --radius-sm: calc(var(--radius) - 4px);
@@ -75,7 +75,7 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
-  :root {
+:root {
   --brass: oklch(0.6 0.11 75);
   --radius: 0.625rem;
   --background: oklch(1 0 0);
@@ -113,25 +113,26 @@
 }
 
 .dark {
-  --brass: oklch(0.78 0.11 80);
-  --background: oklch(0.2 0.035 160);
+  --radius: 0rem;
+  --brass: oklch(0.8 0.12 82);
+  --background: oklch(0.17 0.03 165);
   --foreground: oklch(0.95 0.015 90);
-  --card: oklch(0.25 0.03 165);
+  --card: oklch(0.23 0.035 165);
   --card-foreground: oklch(0.95 0.015 90);
-  --popover: oklch(0.25 0.03 165);
+  --popover: oklch(0.23 0.035 165);
   --popover-foreground: oklch(0.95 0.015 90);
   --primary: oklch(0.78 0.11 80);
   --primary-foreground: oklch(0.2 0.035 160);
   --secondary: oklch(0.3 0.02 220);
   --secondary-foreground: oklch(0.95 0.015 90);
   --muted: oklch(0.3 0.02 200);
-  --muted-foreground: oklch(0.74 0.025 120);
+  --muted-foreground: oklch(0.78 0.025 120);
   --accent: oklch(0.3 0.03 165);
   --accent-foreground: oklch(0.95 0.015 90);
-  --destructive: oklch(0.65 0.17 28);
+  --destructive: oklch(0.68 0.17 28);
   --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.4 0.03 160);
-  --input: oklch(0.4 0.03 160);
+  --border: oklch(0.42 0.04 160);
+  --input: oklch(0.5 0.04 160);
   --ring: oklch(0.78 0.11 80);
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
@@ -159,15 +160,303 @@
   }
 }
 
-@layer base { body { font-family: var(--font-sans); } }
-.academy-bg { background: radial-gradient(ellipse at top, oklch(0.28 0.05 160), var(--background) 60%), var(--background); }
-.panel { background: color-mix(in oklab, var(--card) 85%, transparent); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 10px 30px -15px oklch(0 0 0 / 0.6); }
-.glow { box-shadow: 0 0 0 1px var(--brass), 0 0 40px -10px var(--brass); }
-.btn-brass { display:inline-flex; align-items:center; justify-content:center; padding: .75rem 1.75rem; border-radius: var(--radius); background: linear-gradient(135deg, var(--brass), oklch(0.65 0.1 65)); color: var(--primary-foreground); font-weight:600; letter-spacing:.08em; text-transform:uppercase; font-size:.8rem; transition: transform .15s, filter .15s; }
-.btn-brass:hover { filter: brightness(1.1); transform: translateY(-1px); }
-.btn-ghost { padding: .75rem 1.25rem; border-radius: var(--radius); border: 1px solid color-mix(in oklab, var(--brass) 40%, transparent); color: var(--foreground); font-size: .85rem; transition: border-color .15s, color .15s; }
-.btn-ghost:hover { border-color: var(--brass); color: var(--brass); }
-.field { width:100%; background: var(--background); border:1px solid var(--input); border-radius: var(--radius); padding:.75rem 1rem; color: var(--foreground); outline:none; }
-.field:focus { border-color: var(--brass); }
-.seal { width:4rem; height:4rem; border-radius:9999px; display:grid; place-items:center; font-family: var(--font-display); font-size:1.75rem; border:2px dashed var(--border); color: var(--muted-foreground); }
-.seal-on { border:2px solid var(--brass); color: var(--primary-foreground); background: radial-gradient(circle, var(--brass), oklch(0.6 0.1 65)); }
+/*
+ * Tema "dungeon a pixel": il mondo (cornici, pulsanti, barre, titoli) è a pixel, mentre testo
+ * lungo e campi restano in un font normale per la leggibilità. Regole seguite ovunque:
+ * colori piatti e bordi netti senza sfumature né ombre morbide, bersagli di tocco di almeno
+ * 44px, fuoco da tastiera sempre visibile, nessun movimento se il sistema chiede di ridurlo.
+ */
+@layer base {
+  body {
+    font-family: var(--font-sans);
+  }
+  :focus-visible {
+    outline: 3px solid var(--brass);
+    outline-offset: 3px;
+  }
+}
+
+@layer components {
+  /* Fondo: pietra scura con una trama a scacchi appena percepibile. */
+  .academy-bg {
+    background-color: var(--background);
+    background-image:
+      linear-gradient(
+        45deg,
+        oklch(1 0 0 / 0.025) 25%,
+        transparent 25% 75%,
+        oklch(1 0 0 / 0.025) 75%
+      ),
+      linear-gradient(
+        45deg,
+        oklch(1 0 0 / 0.025) 25%,
+        transparent 25% 75%,
+        oklch(1 0 0 / 0.025) 75%
+      );
+    background-size: 16px 16px;
+    background-position:
+      0 0,
+      8px 8px;
+  }
+
+  /*
+   * Cornice a pixel: quattro ombre nette ai lati lasciano vuoti gli angoli, che risultano
+   * "a gradino". --pb è il colore della cornice, cambiato dalle varianti qui sotto.
+   */
+  .panel {
+    --pb: var(--border);
+    background: var(--card);
+    margin: 4px;
+    box-shadow:
+      -4px 0 0 0 var(--pb),
+      4px 0 0 0 var(--pb),
+      0 -4px 0 0 var(--pb),
+      0 4px 0 0 var(--pb),
+      0 10px 0 0 oklch(0 0 0 / 0.45);
+  }
+  .panel.border-brass,
+  .panel-on,
+  .glow {
+    --pb: var(--brass);
+  }
+  button.panel {
+    cursor: pointer;
+  }
+  button.panel:hover {
+    --pb: var(--brass);
+  }
+
+  .btn-brass,
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    margin: 4px;
+    padding: 0.5rem 1.5rem;
+    font-family: var(--font-display);
+    font-size: 0.875rem;
+    letter-spacing: 0;
+    cursor: pointer;
+    transition: transform 0.08s steps(2);
+  }
+  .btn-brass {
+    --edge: oklch(0.52 0.1 70);
+    background: var(--brass);
+    color: var(--primary-foreground);
+    box-shadow:
+      -4px 0 0 0 var(--edge),
+      4px 0 0 0 var(--edge),
+      0 -4px 0 0 var(--edge),
+      0 4px 0 0 var(--edge),
+      0 8px 0 0 oklch(0 0 0 / 0.5);
+  }
+  .btn-ghost {
+    --edge: color-mix(in oklab, var(--brass) 55%, var(--background));
+    background: var(--background);
+    color: var(--foreground);
+    box-shadow:
+      -4px 0 0 0 var(--edge),
+      4px 0 0 0 var(--edge),
+      0 -4px 0 0 var(--edge),
+      0 4px 0 0 var(--edge);
+  }
+  .btn-brass:hover {
+    background: oklch(0.84 0.11 82);
+  }
+  .btn-ghost:hover {
+    --edge: var(--brass);
+    color: var(--brass);
+  }
+  /* Pressione: il pulsante scende sul proprio "spessore". */
+  .btn-brass:active,
+  .btn-ghost:active {
+    transform: translateY(4px);
+  }
+  .btn-brass:disabled,
+  .btn-ghost:disabled {
+    cursor: not-allowed;
+  }
+
+  /* Voci di navigazione: testo piccolo ma area di tocco piena. */
+  .nav-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 0.25rem;
+    font-family: var(--font-display);
+    font-size: 0.8rem;
+  }
+  .nav-link:hover,
+  .nav-link[aria-current="page"] {
+    color: var(--brass);
+  }
+  .nav-link[aria-current="page"] {
+    box-shadow: 0 4px 0 0 var(--brass);
+  }
+
+  /* Campi: testo a 16px in font normale, cornice netta. */
+  .field {
+    width: 100%;
+    min-height: 44px;
+    background: var(--background);
+    border: 3px solid var(--input);
+    padding: 0.625rem 0.875rem;
+    color: var(--foreground);
+    font-size: 1rem;
+    line-height: 1.5;
+    outline: none;
+  }
+  .field:focus {
+    border-color: var(--brass);
+  }
+  .field:disabled {
+    opacity: 0.5;
+  }
+
+  /* Sigillo di seduta. */
+  .seal {
+    width: 4rem;
+    height: 4rem;
+    display: grid;
+    place-items: center;
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    color: var(--muted-foreground);
+    background: var(--background);
+    box-shadow:
+      -4px 0 0 0 var(--border),
+      4px 0 0 0 var(--border),
+      0 -4px 0 0 var(--border),
+      0 4px 0 0 var(--border);
+  }
+  .seal-on {
+    color: var(--primary-foreground);
+    background: var(--brass);
+    box-shadow:
+      -4px 0 0 0 oklch(0.52 0.1 70),
+      4px 0 0 0 oklch(0.52 0.1 70),
+      0 -4px 0 0 oklch(0.52 0.1 70),
+      0 4px 0 0 oklch(0.52 0.1 70);
+  }
+
+  /* Barre a tacche (crediti, punteggi): riempimento piatto diviso in segmenti. */
+  .meter {
+    position: relative;
+    height: 12px;
+    background: var(--background);
+    border: 2px solid var(--border);
+  }
+  .meter > div {
+    height: 100%;
+    background: var(--brass);
+  }
+  .meter::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      90deg,
+      transparent 0 calc(10% - 2px),
+      var(--background) calc(10% - 2px) 10%
+    );
+  }
+  .meter-sm {
+    height: 8px;
+  }
+
+  /* Battute del dialogo e riquadri di testo. */
+  .bubble {
+    border: 3px solid var(--border);
+    background: var(--secondary);
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+    line-height: 1.6;
+  }
+  .bubble-me {
+    border-color: color-mix(in oklab, var(--brass) 60%, var(--background));
+    background: color-mix(in oklab, var(--brass) 14%, var(--background));
+  }
+  /* Riquadro di dialogo: ritratto a sinistra, battuta a destra, cornice ottone. */
+  .dialog-box {
+    display: flex;
+    gap: 0.875rem;
+    align-items: flex-start;
+    margin: 4px;
+    padding: 0.875rem 1rem;
+    background: var(--background);
+    font-size: 1rem;
+    line-height: 1.6;
+    box-shadow:
+      -4px 0 0 0 var(--brass),
+      4px 0 0 0 var(--brass),
+      0 -4px 0 0 var(--brass),
+      0 4px 0 0 var(--brass);
+  }
+  .portrait {
+    background: var(--secondary);
+    box-shadow:
+      -3px 0 0 0 var(--border),
+      3px 0 0 0 var(--border),
+      0 -3px 0 0 var(--border),
+      0 3px 0 0 var(--border);
+    margin: 3px;
+    image-rendering: pixelated;
+  }
+  .caret {
+    display: inline-block;
+    width: 0.5em;
+    height: 1em;
+    margin-left: 2px;
+    vertical-align: text-bottom;
+    background: var(--brass);
+  }
+  /* Mappa del percorso: muro a blocchi di pietra, pavimento a piastrelle. */
+  .dungeon-wall {
+    background-color: oklch(0.3 0.02 250);
+    background-image:
+      linear-gradient(oklch(0.21 0.02 250) 4px, transparent 4px),
+      linear-gradient(90deg, oklch(0.21 0.02 250) 4px, transparent 4px);
+    background-size: 32px 16px;
+  }
+  .dungeon-floor {
+    border-top: 4px solid oklch(0.14 0.02 250);
+    background-color: oklch(0.24 0.03 165);
+    background-image:
+      linear-gradient(45deg, oklch(0 0 0 / 0.18) 25%, transparent 25% 75%, oklch(0 0 0 / 0.18) 75%),
+      linear-gradient(45deg, oklch(0 0 0 / 0.18) 25%, transparent 25% 75%, oklch(0 0 0 / 0.18) 75%);
+    background-size: 32px 32px;
+    background-position:
+      0 0,
+      16px 16px;
+  }
+  /* La porta raggiungibile è un pulsante: si solleva al passaggio e ha il fuoco visibile. */
+  .dungeon-door {
+    display: block;
+    cursor: pointer;
+    transition: transform 0.08s steps(2);
+  }
+  .dungeon-door:hover {
+    transform: translateY(-4px);
+  }
+
+  .chip {
+    border: 2px solid var(--destructive);
+    padding: 0.25rem 0.625rem;
+    font-size: 0.8rem;
+  }
+  .eyebrow {
+    font-family: var(--font-display);
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

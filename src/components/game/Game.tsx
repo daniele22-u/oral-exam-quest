@@ -32,6 +32,8 @@ import {
   type Turn,
 } from "@/lib/game/engine";
 import { aiStatus, evaluateAnswers, examinerSay } from "@/lib/game/ai";
+import { Portrait, type Mood, type Who } from "./Portrait";
+import { DungeonMap } from "./Dungeon";
 
 type Phase = "home" | "setup" | "hub" | "session" | "debrief" | "report";
 
@@ -206,17 +208,17 @@ export default function Game() {
 
   return (
     <div className="min-h-screen academy-bg text-foreground">
-      <header className="border-b border-brass/30">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+      <header className="border-b-4 border-border bg-card">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-6 px-6 py-2">
           <button
             onClick={() => leaveTo("home")}
-            className="font-display text-2xl tracking-wide text-brass"
+            className="flex min-h-11 items-center font-display text-lg text-brass"
           >
             Commissione
           </button>
-          <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+          <nav className="flex flex-wrap items-center justify-end gap-x-5 text-muted-foreground">
             <span
-              className={ai ? "text-brass" : ""}
+              className={`eyebrow ${ai ? "text-brass" : ""}`}
               title={
                 ai
                   ? "Domande e valutazione generate da un modello AI"
@@ -225,11 +227,12 @@ export default function Game() {
             >
               {ai ? "Esaminatore AI" : "Modalità demo"}
             </span>
-            <span>
+            <span className="eyebrow">
               Sedute {Math.min(passed.length, REQUIRED_SESSIONS)}/{REQUIRED_SESSIONS}
             </span>
             <button
-              className={`uppercase tracking-[0.2em] hover:text-brass ${phase === "home" ? "text-brass" : ""}`}
+              className="nav-link"
+              aria-current={phase === "home" ? "page" : undefined}
               onClick={() => leaveTo("home")}
             >
               Home
@@ -237,20 +240,22 @@ export default function Game() {
             {sessions.length > 0 && (
               <>
                 <button
-                  className={`uppercase tracking-[0.2em] hover:text-brass ${phase === "hub" ? "text-brass" : ""}`}
+                  className="nav-link"
+                  aria-current={phase === "hub" ? "page" : undefined}
                   onClick={() => leaveTo("hub")}
                 >
                   Percorso
                 </button>
                 <button
-                  className={`uppercase tracking-[0.2em] hover:text-brass ${phase === "report" ? "text-brass" : ""}`}
+                  className="nav-link"
+                  aria-current={phase === "report" ? "page" : undefined}
                   onClick={() => leaveTo("report")}
                 >
                   Fascicolo
                 </button>
               </>
             )}
-          </div>
+          </nav>
         </div>
       </header>
       <main className="mx-auto max-w-5xl px-6 py-10">
@@ -324,11 +329,11 @@ export default function Game() {
 function Home({ onStart, resume }: { onStart: () => void; resume: boolean }) {
   return (
     <section className="py-12 text-center">
-      <p className="text-xs uppercase tracking-[0.4em] text-brass">Simulatore d'esame orale</p>
-      <h1 className="mt-6 font-display text-6xl leading-tight md:text-7xl">
+      <p className="eyebrow text-brass">Simulatore d'esame orale</p>
+      <h1 className="mt-6 font-display text-3xl leading-snug md:text-5xl">
         Non basta sapere.
         <br />
-        <em className="text-brass">Devi sapere quanto sai.</em>
+        <em className="not-italic text-brass">Devi sapere quanto sai.</em>
       </h1>
       <p className="mx-auto mt-8 max-w-2xl text-lg text-muted-foreground">
         Supera tre sedute preliminari con esaminatori estratti a sorte, dichiara la tua sicurezza
@@ -354,7 +359,7 @@ function Home({ onStart, resume }: { onStart: () => void; resume: boolean }) {
           ],
         ].map(([n, t, d]) => (
           <div key={n} className="panel p-5">
-            <div className="font-display text-3xl text-brass">{n}</div>
+            <div className="font-display text-xl text-brass">{n}</div>
             <div className="mt-2 font-semibold">{t}</div>
             <p className="mt-1 text-sm text-muted-foreground">{d}</p>
           </div>
@@ -389,7 +394,7 @@ function Setup({
   const ok = count >= 3;
   return (
     <section className="mx-auto max-w-2xl">
-      <h2 className="font-display text-4xl">Programma d'esame</h2>
+      <h2 className="font-display text-2xl">Programma d'esame</h2>
       <p className="mt-2 text-muted-foreground">
         Gli argomenti di ogni seduta vengono estratti a sorte da questo programma.
       </p>
@@ -398,9 +403,9 @@ function Setup({
           <button
             key={c}
             onClick={() => setCourse(c)}
-            className={`panel p-4 text-left transition ${course === c ? "ring-2 ring-brass" : "hover:border-brass/60"}`}
+            className={`panel p-4 text-left transition ${course === c ? "panel-on" : ""}`}
           >
-            <div className="font-display text-xl">
+            <div className="font-display text-base">
               {c === "custom" ? "Materia personalizzata" : c}
             </div>
             <div className="text-sm text-muted-foreground">
@@ -473,10 +478,10 @@ function Hub({
         <div
           className={`panel mb-8 border-l-4 p-5 ${last.passed ? "border-l-brass" : "border-l-destructive"}`}
         >
-          <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+          <div className="eyebrow text-muted-foreground">
             Esito ultima seduta · {last.examinerName}
           </div>
-          <div className="mt-1 font-display text-2xl">
+          <div className="mt-1 font-display text-lg">
             {last.passed ? "Seduta convalidata" : "Seduta non convalidata"} — {last.credits} crediti
           </div>
           {!last.passed && (
@@ -486,31 +491,20 @@ function Hub({
           )}
         </div>
       )}
-      <h2 className="font-display text-4xl">Il percorso verso il verbale</h2>
+      <h2 className="font-display text-2xl">Il percorso verso il verbale</h2>
       <p className="mt-1 text-muted-foreground">
         {course} ·{" "}
         <button className="underline hover:text-brass" onClick={onSetup}>
           cambia programma
         </button>
       </p>
-      <div className="mt-8 grid gap-4 md:grid-cols-4">
-        {Array.from({ length: REQUIRED_SESSIONS }).map((_, i) => (
-          <div
-            key={i}
-            className={`panel flex aspect-square flex-col items-center justify-center p-4 text-center ${i < passed ? "border-brass" : ""}`}
-          >
-            <div className={`seal ${i < passed ? "seal-on" : ""}`}>
-              {["I", "II", "III"][i] ?? i + 1}
-            </div>
-            <div className="mt-3 text-sm">{i < passed ? "Convalidata" : "Seduta preliminare"}</div>
-          </div>
-        ))}
-        <div
-          className={`panel flex aspect-square flex-col items-center justify-center p-4 text-center ${unlocked ? "border-brass glow" : "opacity-50"}`}
-        >
-          <div className={`seal ${boss ? "seal-on" : ""}`}>P</div>
-          <div className="mt-3 text-sm">{unlocked ? "Commissione Plenaria" : "Bloccata"}</div>
-        </div>
+      <div className="mt-8">
+        <DungeonMap
+          required={REQUIRED_SESSIONS}
+          passed={passed}
+          bossPassed={boss}
+          onEnter={unlocked ? onBoss : onSession}
+        />
       </div>
       <div className="mt-10 flex flex-wrap gap-3">
         {!unlocked && (
@@ -557,6 +551,9 @@ function Session({
   // salvata, così una ricarica a metà attesa non lascia la seduta in uno stato incompleto.
   const [busy, setBusy] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
+  // Espressione del ritratto e battuta appena pronunciata (l'unica che compare a macchina da scrivere).
+  const [mood, setMood] = useState<Mood>("neutral");
+  const [fresh, setFresh] = useState<string | null>(null);
   const mounted = useRef(true);
   useEffect(() => {
     mounted.current = true;
@@ -584,8 +581,16 @@ function Session({
     transcript: Turn[],
     remaining: number,
     fallback: string,
+    fallbackMood: Mood,
   ): Promise<string> {
-    if (!ai) return fallback;
+    const say = (text: string, m: Mood) => {
+      if (mounted.current) {
+        setMood(m);
+        setFresh(text);
+      }
+      return text;
+    };
+    if (!ai) return say(fallback, fallbackMood);
     try {
       const note = live.bossNotes[topic.id];
       const r = await examinerSay({
@@ -603,14 +608,16 @@ function Session({
           remaining,
         },
       });
-      return r.ok ? r.text : fallback;
+      return r.ok ? say(r.text, r.mood) : say(fallback, fallbackMood);
     } catch {
-      return fallback;
+      return say(fallback, fallbackMood);
     }
   }
 
   async function declare(conf: Confidence | "lacuna") {
     if (conf === "lacuna") {
+      setMood(live.isBoss ? "stern" : "neutral");
+      setFresh(null);
       const score = { accuracy: 0, completeness: 0, logic: 0, total: 0 };
       const t: Turn[] = [
         { role: "prof", text: topic.question },
@@ -653,7 +660,14 @@ function Session({
           : " " + pick(ex!.doubt)
         : "";
     setBusy("L'esaminatore formula la domanda…");
-    const opening = await profLine("open", conf, [], 0, intro + topic.question + pressure);
+    const opening = await profLine(
+      "open",
+      conf,
+      [],
+      0,
+      intro + topic.question + pressure,
+      conf === "senzarete" ? "stern" : "neutral",
+    );
     setBusy(null);
     // Gli approfondimenti vengono estratti a sorte: rigiocare lo stesso argomento non ripete la stessa sequenza.
     setLive({
@@ -682,6 +696,8 @@ function Session({
           "Lo prendo come un segno di nervosismo. Torniamo al merito, prego.",
         ]),
       });
+      setMood("stern");
+      setFresh(t[t.length - 1]!.text);
       setLive({ ...live, transcript: t });
       return;
     }
@@ -704,6 +720,7 @@ function Session({
         t,
         maxFU - live.asked - 1,
         `${prefix} ${followUps[live.asked % followUps.length]}`,
+        partial >= 5 ? "pleased" : "stern",
       );
       setBusy(null);
       setPending(null);
@@ -741,6 +758,7 @@ function Session({
       setPending(null);
     }
     const delta = creditDelta(score, conf);
+    setMood(score.total >= 6 ? "pleased" : "stern");
     t.push({
       role: "prof",
       text:
@@ -748,6 +766,7 @@ function Session({
           ? "Va bene. Possiamo considerare l'argomento superato."
           : "Non è sufficiente. Annoto le lacune emerse.",
     });
+    setFresh(t[t.length - 1]!.text);
     const rec: QuestionRecord = {
       topicId: topic.id,
       topicTitle: topic.title,
@@ -771,6 +790,8 @@ function Session({
 
   function next() {
     if (live.idx + 1 >= live.topics.length) return onEnd(live);
+    setMood("neutral");
+    setFresh(null);
     setLive({
       ...live,
       idx: live.idx + 1,
@@ -783,25 +804,25 @@ function Session({
     });
   }
   const last = live.records[live.records.length - 1];
+  const who: Who = live.isBoss ? "presidente" : ex!.id;
+  const lastProf = live.transcript.map((m) => m.role).lastIndexOf("prof");
 
   return (
     <section className="grid gap-6 md:grid-cols-[260px_1fr]">
       <aside className="panel h-fit p-5">
-        <div className="text-xs uppercase tracking-[0.2em] text-brass">
-          {live.isBoss ? PRESIDENT.title : ex!.title}
+        <div className="mb-4 hidden md:block">
+          <Portrait who={who} mood={mood} name={profName} size={128} />
         </div>
-        <div className="mt-1 font-display text-2xl">{profName}</div>
+        <div className="eyebrow text-brass">{live.isBoss ? PRESIDENT.title : ex!.title}</div>
+        <div className="mt-1 font-display text-lg">{profName}</div>
         <p className="mt-2 text-sm text-muted-foreground">
           {live.isBoss ? "Ha davanti a sé il suo fascicolo completo." : ex!.trait}
         </p>
         <div className="mt-6 border-t border-brass/20 pt-4">
-          <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-            Crediti Fiducia
-          </div>
-          <div className="font-display text-5xl text-brass">{live.credits}</div>
-          <div className="mt-2 h-1.5 overflow-hidden rounded bg-muted">
+          <div className="eyebrow text-muted-foreground">Crediti Fiducia</div>
+          <div className="font-display text-4xl text-brass">{live.credits}</div>
+          <div className="meter mt-2">
             <div
-              className="h-full bg-brass transition-all"
               style={{
                 width: `${Math.min(100, Math.max(0, (live.credits / PASS_THRESHOLD) * 100))}%`,
               }}
@@ -817,15 +838,13 @@ function Session({
       </aside>
 
       <div className="panel flex min-h-[560px] flex-col p-6">
-        <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-          {topic.course}
-        </div>
-        <h2 className="font-display text-3xl">{topic.title}</h2>
+        <div className="eyebrow text-muted-foreground">{topic.course}</div>
+        <h2 className="font-display text-xl">{topic.title}</h2>
 
         {live.step === "declare" && (
           <div className="mt-6">
             {live.isBoss && live.bossNotes[topic.id] && (
-              <p className="mb-4 border-l-2 border-brass pl-4 font-display text-lg italic">
+              <p className="mb-4 border-l-2 border-brass pl-4 font-display text-sm">
                 «{live.bossNotes[topic.id]}»
               </p>
             )}
@@ -839,9 +858,9 @@ function Session({
                   key={c}
                   onClick={() => declare(c)}
                   disabled={!!busy}
-                  className="panel p-4 text-left transition hover:border-brass hover:-translate-y-0.5 disabled:pointer-events-none disabled:opacity-50"
+                  className="panel p-4 text-left transition disabled:pointer-events-none disabled:opacity-50"
                 >
-                  <div className="font-display text-xl text-brass">{CONFIDENCE[c].label}</div>
+                  <div className="font-display text-base text-brass">{CONFIDENCE[c].label}</div>
                   <div className="mt-1 text-xs text-muted-foreground">{CONFIDENCE[c].desc}</div>
                   <div className="mt-3 text-xs">
                     ×{CONFIDENCE[c].mult} crediti · −{CONFIDENCE[c].penalty} se insufficiente ·{" "}
@@ -855,7 +874,7 @@ function Session({
               disabled={!!busy}
               className="btn-ghost mt-4 w-full disabled:pointer-events-none disabled:opacity-50"
             >
-              Rinvio a giudizio · Lacuna riconosciuta (−2, registrata come debito formativo)
+              Rinvio a giudizio · dichiaro una lacuna (−2 crediti)
             </button>
             {busy && (
               <div className="mt-4">
@@ -868,22 +887,31 @@ function Session({
         {live.step !== "declare" && (
           <>
             <div className="mt-4 flex-1 space-y-3 overflow-y-auto pr-1">
-              {live.transcript.map((m, i) => (
-                <div
-                  key={i}
-                  className={`max-w-[85%] rounded-lg px-4 py-3 text-sm leading-relaxed ${m.role === "prof" ? "bg-secondary" : "ml-auto bg-brass/15 border border-brass/30"}`}
-                >
-                  <div className="mb-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                    {m.role === "prof" ? profName : "Studente"}
+              {live.transcript.map((m, i) =>
+                i === lastProf ? (
+                  // La battuta corrente dell'esaminatore: riquadro di dialogo con ritratto.
+                  <div key={i} className="dialog-box">
+                    <Portrait who={who} mood={mood} name={profName} size={72} />
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1 eyebrow text-brass">{profName}</div>
+                      {m.text === fresh ? <Typewriter text={m.text} /> : m.text}
+                    </div>
                   </div>
-                  {m.text}
-                </div>
-              ))}
+                ) : (
+                  <div
+                    key={i}
+                    className={`bubble max-w-[85%] ${m.role === "prof" ? "" : "bubble-me ml-auto"}`}
+                  >
+                    <div className="mb-1 eyebrow text-muted-foreground">
+                      {m.role === "prof" ? profName : "Studente"}
+                    </div>
+                    {m.text}
+                  </div>
+                ),
+              )}
               {pending && (
-                <div className="ml-auto max-w-[85%] rounded-lg border border-brass/30 bg-brass/15 px-4 py-3 text-sm leading-relaxed">
-                  <div className="mb-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                    Studente
-                  </div>
+                <div className="bubble bubble-me ml-auto max-w-[85%]">
+                  <div className="mb-1 eyebrow text-muted-foreground">Studente</div>
                   {pending}
                 </div>
               )}
@@ -930,7 +958,7 @@ function Session({
                 <div className="flex flex-wrap items-end gap-6">
                   <ScoreBars s={last.score} />
                   <div
-                    className={`font-display text-4xl ${last.delta >= 0 ? "text-brass" : "text-destructive"}`}
+                    className={`font-display text-2xl ${last.delta >= 0 ? "text-brass" : "text-destructive"}`}
                   >
                     {last.delta >= 0 ? "+" : ""}
                     {last.delta}
@@ -942,14 +970,12 @@ function Session({
                 <Coverage q={last} />
                 {last.feedback && (
                   <div className="mt-3 rounded-md border border-brass/30 p-4 text-sm">
-                    <div className="text-xs uppercase tracking-widest text-brass">
-                      Giudizio dell'esaminatore
-                    </div>
+                    <div className="eyebrow text-brass">Giudizio dell'esaminatore</div>
                     <p className="mt-1 leading-relaxed">{last.feedback}</p>
                   </div>
                 )}
                 <details className="mt-3 rounded-md bg-secondary p-4 text-sm">
-                  <summary className="cursor-pointer text-xs uppercase tracking-widest text-brass">
+                  <summary className="cursor-pointer eyebrow text-brass">
                     Spiegazione modello
                   </summary>
                   <p className="mt-2 leading-relaxed">{last.model}</p>
@@ -975,8 +1001,8 @@ function ScoreBars({ s }: { s: QuestionRecord["score"] }) {
       ).map(([l, v]) => (
         <div key={l} className="flex items-center gap-2">
           <span className="w-24 text-muted-foreground">{l}</span>
-          <div className="h-1.5 flex-1 rounded bg-muted">
-            <div className="h-full rounded bg-brass" style={{ width: `${v * 10}%` }} />
+          <div className="meter meter-sm flex-1">
+            <div style={{ width: `${v * 10}%` }} />
           </div>
           <span className="w-6 text-right">{v}</span>
         </div>
@@ -986,10 +1012,43 @@ function ScoreBars({ s }: { s: QuestionRecord["score"] }) {
   );
 }
 
+/**
+ * Testo che compare un carattere alla volta, come nei dialoghi dei giochi di ruolo. Un tocco lo
+ * completa subito; con "riduci movimento" attivo compare intero. Chi usa uno screen reader riceve
+ * sempre la frase completa, non i frammenti.
+ */
+function Typewriter({ text }: { text: string }) {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setN(text.length);
+      return;
+    }
+    setN(0);
+    const id = window.setInterval(() => {
+      setN((v) => {
+        if (v >= text.length) window.clearInterval(id);
+        return Math.min(text.length, v + 2);
+      });
+    }, 24);
+    return () => window.clearInterval(id);
+  }, [text]);
+  const done = n >= text.length;
+  return (
+    <div onClick={() => setN(text.length)} className={done ? "" : "cursor-pointer"}>
+      <span className="sr-only">{text}</span>
+      <span aria-hidden="true">
+        {text.slice(0, n)}
+        {!done && <span className="caret" />}
+      </span>
+    </div>
+  );
+}
+
 function Busy({ text }: { text: string }) {
   return (
     <div role="status" className="flex items-center gap-2 text-sm italic text-muted-foreground">
-      <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-brass" />
+      <span className="inline-block h-2.5 w-2.5 animate-pulse bg-brass" />
       {text}
     </div>
   );
@@ -1038,8 +1097,8 @@ function Debrief({
     );
   return (
     <section>
-      <div className="text-xs uppercase tracking-[0.3em] text-brass">Referto di seduta</div>
-      <h2 className="mt-2 font-display text-4xl">
+      <div className="eyebrow text-brass">Referto di seduta</div>
+      <h2 className="mt-2 font-display text-2xl">
         {title} · {s.examinerName}
       </h2>
       <div className="mt-6 grid gap-4 md:grid-cols-3">
@@ -1048,7 +1107,7 @@ function Debrief({
         <Stat label="Calibrazione sicurezza" value={`${calibration(s.questions)}%`} />
       </div>
 
-      <h3 className="mt-10 font-display text-3xl">Punti carenti</h3>
+      <h3 className="mt-10 font-display text-xl">Punti carenti</h3>
       {weak.length === 0 && (
         <p className="mt-3 text-muted-foreground">
           Nessun punto carente rilevato in questa seduta.
@@ -1058,7 +1117,7 @@ function Debrief({
         {weak.map((q, i) => (
           <div key={i} className="panel border-l-4 border-l-destructive p-5">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <div className="font-display text-2xl">{q.topicTitle}</div>
+              <div className="font-display text-lg">{q.topicTitle}</div>
               <div className="text-sm text-muted-foreground">
                 {q.confidence === "lacuna" ? "Lacuna riconosciuta" : CONFIDENCE[q.confidence].label}{" "}
                 · {q.score.total}/10
@@ -1076,15 +1135,12 @@ function Debrief({
             )}
             {q.missed && q.missed.length > 0 && (
               <div className="mt-4">
-                <div className="text-xs uppercase tracking-widest text-muted-foreground">
+                <div className="eyebrow text-muted-foreground">
                   {q.ai ? "Concetti mancanti o sbagliati" : "Concetti che non ha toccato"}
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {q.missed.map((m) => (
-                    <span
-                      key={m}
-                      className="rounded-full border border-destructive/50 px-3 py-1 text-xs"
-                    >
+                    <span key={m} className="chip">
                       {m}
                     </span>
                   ))}
@@ -1092,9 +1148,7 @@ function Debrief({
               </div>
             )}
             <div className="mt-4 rounded-md bg-secondary p-4 text-sm">
-              <div className="text-xs uppercase tracking-widest text-brass">
-                Cosa avrebbe dovuto dire
-              </div>
+              <div className="eyebrow text-brass">Cosa avrebbe dovuto dire</div>
               <p className="mt-1 leading-relaxed">{q.model}</p>
             </div>
           </div>
@@ -1103,7 +1157,7 @@ function Debrief({
 
       {strong.length > 0 && (
         <>
-          <h3 className="mt-10 font-display text-3xl">Argomenti solidi</h3>
+          <h3 className="mt-10 font-display text-xl">Argomenti solidi</h3>
           <ul className="mt-3 space-y-1 text-sm">
             {strong.map((q, i) => (
               <li key={i}>
@@ -1154,7 +1208,7 @@ function Report({
       <button className="btn-ghost" onClick={onBack}>
         ← Torna al percorso
       </button>
-      <div className="mt-6 text-xs uppercase tracking-[0.3em] text-brass">
+      <div className="mt-6 eyebrow text-brass">
         {final ? "Verbale d'esame" : "Fascicolo provvisorio"}
       </div>
       <div className="mt-4 grid gap-4 md:grid-cols-4">
@@ -1169,9 +1223,7 @@ function Report({
       </p>
       {openDebts.length > 0 && (
         <div className="panel mt-8 border-l-4 border-l-destructive p-5">
-          <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-            Da ripassare
-          </div>
+          <div className="eyebrow text-muted-foreground">Da ripassare</div>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
             {openDebts.map((q) => (
               <li key={q.topicId}>
@@ -1187,17 +1239,17 @@ function Report({
           Il fascicolo è ancora vuoto: sostenga la prima seduta.
         </p>
       )}
-      <h3 className="mt-10 font-display text-3xl">Cronologia</h3>
+      <h3 className="mt-10 font-display text-xl">Cronologia</h3>
       <ol className="mt-4 space-y-6 border-l border-brass/30 pl-6">
         {sessions.map((s) => (
           <li key={s.id}>
-            <div className="font-display text-xl">
+            <div className="font-display text-base">
               {sessionTitle(sessions, s)} · {s.examinerName}{" "}
               <span className={`text-sm ${s.passed ? "text-brass" : "text-destructive"}`}>
                 ({s.passed ? "convalidata" : "non convalidata"}, {s.credits} crediti)
               </span>{" "}
               <button
-                className="font-sans text-xs uppercase tracking-[0.2em] text-muted-foreground underline hover:text-brass"
+                className="eyebrow text-muted-foreground underline hover:text-brass"
                 onClick={() => onDebrief(s.id)}
               >
                 Referto
@@ -1235,7 +1287,7 @@ function Report({
                           {q.transcript.map((m, i) => (
                             <p key={i}>
                               <span
-                                className={`text-xs uppercase tracking-widest ${m.role === "prof" ? "text-brass" : "text-muted-foreground"}`}
+                                className={`eyebrow ${m.role === "prof" ? "text-brass" : "text-muted-foreground"}`}
                               >
                                 {m.role === "prof" ? q.examiner : "Studente"}
                               </span>
@@ -1245,9 +1297,7 @@ function Report({
                           ))}
                         </div>
                         <div className="rounded-md bg-secondary p-4">
-                          <div className="text-xs uppercase tracking-widest text-brass">
-                            Spiegazione modello
-                          </div>
+                          <div className="eyebrow text-brass">Spiegazione modello</div>
                           <p className="mt-1">{q.model}</p>
                         </div>
                       </div>
@@ -1264,7 +1314,7 @@ function Report({
 }
 const Stat = ({ label, value, big }: { label: string; value: string; big?: boolean }) => (
   <div className={`panel p-5 ${big ? "border-brass glow" : ""}`}>
-    <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">{label}</div>
-    <div className="mt-2 font-display text-4xl text-brass">{value}</div>
+    <div className="eyebrow text-muted-foreground">{label}</div>
+    <div className="mt-2 font-display text-2xl text-brass">{value}</div>
   </div>
 );

@@ -55,7 +55,7 @@ export const examinerSay = createServerFn({ method: "POST" })
       pressure,
       "Parla in italiano, dando del Lei, restando sempre nel personaggio. Massimo 3 frasi e una sola domanda. Non rivelare mai la risposta corretta e non dare voti.",
       GUARD,
-      'Rispondi in JSON: {"text": "..."}.',
+      'Rispondi in JSON: {"text": "...", "mood": "..."}. mood è la tua espressione mentre parli: "pleased" se l\'ultima risposta era corretta, "stern" se era sbagliata, vaga o evasiva, "neutral" negli altri casi e nella domanda d\'apertura.',
     ]
       .filter(Boolean)
       .join("\n");
@@ -79,14 +79,28 @@ export const examinerSay = createServerFn({ method: "POST" })
             `Reagisci all'ultima risposta dello studente: se contiene un errore o un'imprecisione, indicala con precisione senza correggerla; poi poni UNA domanda di approfondimento che non sia già stata fatta. Domande di approfondimento rimaste dopo questa: ${data.remaining}.`,
           ].join("\n");
     try {
-      const out = await geminiJson<{ text?: string }>({
+      const out = await geminiJson<{ text?: string; mood?: string }>({
         system,
         user,
         temperature: 0.8,
-        schema: { type: "OBJECT", properties: { text: { type: "STRING" } }, required: ["text"] },
+        schema: {
+          type: "OBJECT",
+          properties: {
+            text: { type: "STRING" },
+            mood: { type: "STRING", enum: ["neutral", "stern", "pleased"] },
+          },
+          required: ["text", "mood"],
+        },
       });
       const text = out.text?.trim();
-      return text ? { ok: true as const, text: text.slice(0, 1200) } : { ok: false as const };
+      const mood = out.mood === "stern" || out.mood === "pleased" ? out.mood : "neutral";
+      return text
+        ? {
+            ok: true as const,
+            text: text.slice(0, 1200),
+            mood: mood as "neutral" | "stern" | "pleased",
+          }
+        : { ok: false as const };
     } catch (e) {
       console.error("[examinerSay]", e instanceof Error ? e.message : e);
       return { ok: false as const };
