@@ -653,8 +653,10 @@ function Session({
   }
 
   async function declare(conf: Confidence | "lacuna") {
+    // In Plenaria non ci si può sottrarre: la lacuna si dichiara solo nelle sedute preliminari.
+    if (conf === "lacuna" && live.isBoss) return;
     if (conf === "lacuna") {
-      setMood(live.isBoss ? "stern" : "neutral");
+      setMood("neutral");
       setFresh(null);
       const score = { accuracy: 0, completeness: 0, logic: 0, total: 0 };
       const t: Turn[] = [
@@ -946,13 +948,20 @@ function Session({
                 </button>
               ))}
             </div>
-            <button
-              onClick={() => declare("lacuna")}
-              disabled={!!busy}
-              className="btn-ghost mt-4 w-full disabled:pointer-events-none disabled:opacity-50"
-            >
-              Rinvio a giudizio · dichiaro una lacuna (−2 crediti)
-            </button>
+            {live.isBoss ? (
+              <p className="mt-4 text-sm text-muted-foreground">
+                Davanti al Presidente non è ammesso il rinvio a giudizio: deve rispondere a ogni
+                domanda.
+              </p>
+            ) : (
+              <button
+                onClick={() => declare("lacuna")}
+                disabled={!!busy}
+                className="btn-ghost mt-4 w-full disabled:pointer-events-none disabled:opacity-50"
+              >
+                Rinvio a giudizio · dichiaro una lacuna (−2 crediti)
+              </button>
+            )}
             {busy && (
               <div className="mt-4">
                 <Busy text={busy} />

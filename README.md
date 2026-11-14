@@ -15,7 +15,7 @@ Simulatore gamificato di esame orale universitario: un serious game accademico i
    | Senza Rete    | ×3                     | −20      | 4                                        |
    | Lacuna        | —                      | −2       | nessuno (debito formativo nel fascicolo) |
 
-4. **Commissione Plenaria**: dopo 3 sedute convalidate il Presidente ripropone gli argomenti peggiori di _tutto_ lo storico, sedute fallite comprese, e ricorda perché.
+4. **Commissione Plenaria**: dopo 3 sedute convalidate il Presidente ripropone gli argomenti peggiori di _tutto_ lo storico, sedute fallite comprese, e ricorda perché. Qui non è ammesso dichiarare una lacuna: si risponde a ogni domanda.
 5. **Verbale**: voto in trentesimi, indice di calibrazione della sicurezza, debiti formativi ancora aperti e cronologia espandibile con trascrizione, punteggi e spiegazione modello.
 
 Il fascicolo e la seduta in corso sono salvati nel browser (`localStorage`): ricaricando la pagina si riprende da dove si era rimasti.
